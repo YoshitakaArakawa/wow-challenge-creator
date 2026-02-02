@@ -1,0 +1,28 @@
+{
+  "name": "wow-twbx-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone CLI tools for analyzing Tableau TWBX workbooks",
+  "scripts": {
+    "build": "tsc",
+    "download": "tsx download.ts",
+    "unpack": "tsx unpack.ts",
+    "structure": "tsx structure.ts",
+    "calc-fields": "tsx calculated-fields.ts",
+    "calc-deps": "tsx dependencies.ts",
+    "lod": "tsx lod-expressions.ts",
+    "data-profile": "tsx data-profile.ts"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "axios": "^1.7.9",
+    "fast-xml-parser": "^5.0.7",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.6",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
