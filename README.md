@@ -1,67 +1,48 @@
 # WOW Challenge Creator
 
-A [Claude Code](https://claude.ai/claude-code) powered toolkit for creating [Workout Wednesday](https://workout-wednesday.com/) Tableau challenges.
+[Claude Code](https://claude.ai/claude-code) を使って [Workout Wednesday](https://workout-wednesday.com/) の Tableau 出題を作成するためのツールキット。
 
-## What is Workout Wednesday?
+## できること
 
-Workout Wednesday (WOW) is a weekly Tableau skill challenge. Each week, a new visualization is published and participants try to recreate it as closely as possible. Difficulty ranges from beginner to advanced.
+1. **ブレスト** - アイデア発想と重複チェック
+2. **プロトタイプ** - HTML + Chart.js でレイアウトを素早く視覚化
+3. **要件作成** - 英語・日本語のバイリンガル要件文を一貫したスタイルで作成
+4. **ワークブック解析** - .twbx から構造、計算フィールド、LOD式、依存関係を抽出
+5. **スクリーンショット** - Tableau Public のビジュアライゼーションを PNG で取得
+6. **Tableau 機能検索** - Tableau Desktop の最新機能を検索
 
-- Website: https://workout-wednesday.com/
-- Tableau challenges: https://workout-wednesday.com/category/tableau/
-
-## What This Repo Does
-
-This repository provides Claude Code skills and scripts to streamline the WOW challenge authoring workflow:
-
-1. **Brainstorm** - Generate and refine challenge ideas with duplicate checking
-2. **Prototype** - Quick HTML mockups to visualize chart layouts before building in Tableau
-3. **Create challenges** - Write bilingual (EN/JA) requirement documents with a consistent style
-4. **Analyze workbooks** - Extract structure, calculated fields, LOD expressions, and dependencies from .twbx files
-5. **Capture screenshots** - Grab PNGs from Tableau Public visualizations
-6. **Look up Tableau features** - Search recent Tableau Desktop features for inspiration
-
-## Getting Started
-
-### Prerequisites
-
-- [Claude Code](https://claude.ai/claude-code) CLI or IDE extension
-- Node.js 18+
-- (Optional) Python 3.x for Tableau feature cache updates
-
-### Setup
+## セットアップ
 
 ```bash
 git clone https://github.com/YoshitakaArakawa/wow-challenge-creator.git
 cd wow-challenge-creator
 ```
 
-Install dependencies for the analysis scripts:
+## 使い方
 
-```bash
-cd .claude/skills/create-challenges/scripts/twbx && npm install
-cd ../tableau-public && npm install
-```
+プロジェクトを Claude Code で開いて対話するだけで、以下のワークフローで出題を作成できる。
 
-### Usage
+1. **出題フォルダの作成** - `outputs/YYYY-MM-DD-theme-name/` に要件文や議事録をまとめるフォルダを作成
+2. **ブレスト** - 直近の出題との重複チェック、ヒアリング、アイデア展開。必要に応じて Tableau の最新機能も検索
+3. **プロトタイプ（任意）** - Viz の方向性が固まったら HTML でレイアウトを素早く確認
+4. **ワークブック作成** - 人間が Tableau Desktop で問題ワークブックを作成し、Tableau Public にパブリッシュする。TWBX と問題画像を出題フォルダに配置して連携する形でもOK
+5. **要件作成** - テーマを正式な要件文に。Tableau Public の Viz をスクリーンショットやワークブック解析で分析し、要件に反映
+6. **X 投稿文の作成** - 出題公開時の告知文を作成
 
-Open the project in Claude Code and use the built-in skills:
-
-- `/brainstorm` - Start ideation for a new challenge
-- `/create-challenges` - Write requirement docs or analyze a workbook
-- `/tableau-features` - Search Tableau Desktop features
-
-The workflow and conventions are documented in [CLAUDE.md](CLAUDE.md).
-
-## Project Structure
+## プロジェクト構成
 
 ```
 .claude/skills/
-  brainstorm/          # Ideation and duplicate checking
-  create-challenges/   # Requirement authoring + twbx/screenshot scripts
-  tableau-features/    # Tableau Desktop feature lookup with cache
-outputs/               # Generated challenge folders (gitignored)
+  brainstorm/          # アイデア発想・重複チェック
+  create-challenges/   # 要件作成 + twbx/スクリーンショットスクリプト
+  tableau-features/    # Tableau Desktop 機能検索（キャッシュ付き）
+outputs/               # 出題フォルダ（gitignore対象）
 ```
 
-## License
+## 謝辞
+
+`.claude/skills/create-challenges/scripts/` のワークブック解析スクリプトは [tableau-public-mcp](https://github.com/wjsutton/tableau-public-mcp)（[wjsutton](https://github.com/wjsutton) 作、[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)）を参考にしています。
+
+## ライセンス
 
 [MIT](LICENSE)
