@@ -37,6 +37,7 @@ cd wow-challenge-creator
   create-challenges/   # 要件作成 + twbx/スクリーンショットスクリプト
   tableau-features/    # Tableau Desktop 機能検索（キャッシュ付き）
 outputs/               # 出題フォルダ（gitignore対象）
+examples/              # 出題例（WOW2026 W12: https://www.workout-wednesday.com/2026w12tab/）
 ```
 
 ## 謝辞
