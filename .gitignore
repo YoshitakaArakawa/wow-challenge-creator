@@ -2,3 +2,16 @@ node_modules/
 outputs/
 common/
 nul
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Logs
+*.log
