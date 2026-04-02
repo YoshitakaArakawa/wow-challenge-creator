@@ -59,7 +59,7 @@ npx tsx .claude/skills/create-challenges/scripts/tableau-public/screenshot.ts "h
 
 ## TWBX解析ツール
 
-`.claude/skills/create-challenges/scripts/twbx/` に7つのCLIスクリプトがある。すべてJSON出力。
+`.claude/skills/create-challenges/scripts/twbx/` に6つのCLIスクリプトがある。すべてJSON出力。
 
 ### 前提
 ```bash
@@ -110,12 +110,6 @@ npx tsx .claude/skills/create-challenges/scripts/twbx/lod-expressions.ts <twbFil
 - FIXED/INCLUDE/EXCLUDE式の抽出・分類・説明生成
 - ネストされたLODの検出
 
-#### 7. data-profile - データプロファイル
-```bash
-npx tsx .claude/skills/create-challenges/scripts/twbx/data-profile.ts <extractionPath> [--no-images]
-```
-- CSV/Excel/JSONのカラム名抽出
-- .hyper/.tdeは非対応（Tableau独自形式）
 
 ### 典型的な解析フロー
 `--output-dir` を指定すると、中間成果物が出題フォルダの `tmp/` に格納される。
@@ -135,5 +129,4 @@ npx tsx .claude/skills/create-challenges/scripts/twbx/structure.ts "<mainTwbPath
 # 4. 必要に応じて詳細分析
 npx tsx .claude/skills/create-challenges/scripts/twbx/calculated-fields.ts "<mainTwbPath>"
 npx tsx .claude/skills/create-challenges/scripts/twbx/lod-expressions.ts "<mainTwbPath>"
-npx tsx .claude/skills/create-challenges/scripts/twbx/data-profile.ts "<extractionPath>"
 ```

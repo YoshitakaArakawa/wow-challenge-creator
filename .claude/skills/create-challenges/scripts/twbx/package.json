@@ -16,8 +16,7 @@
   "dependencies": {
     "adm-zip": "^0.5.16",
     "axios": "^1.7.9",
-    "fast-xml-parser": "^5.0.7",
-    "xlsx": "^0.18.5"
+    "fast-xml-parser": "^5.0.7"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.6",
