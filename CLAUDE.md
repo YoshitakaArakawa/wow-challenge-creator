@@ -18,6 +18,7 @@ Workout Wednesday (WOW) Tableau出題を作成するための支援環境。
 |------|-----|
 | WOW Tableau出題 | https://workout-wednesday.com/category/tableau/ |
 | Tableau最新機能 | https://www.tableau.com/products/new-features |
+| Tableau全リリース一覧 | https://www.tableau.com/products/all-features |
 
 ## ワークフロー
 
@@ -52,3 +53,33 @@ outputs/YYYY-MM-DD-theme-name/
 → `.claude/skills/create-challenges/SKILL.md` を使用
 
 決定したテーマを正式な要件文に。必要に応じてTableau Public MCPで既存Vizを解析。結果は `requirements.md` に保存。
+
+### Step 4: X投稿文の作成
+出題公開時にXへ投稿する告知文を作成する。
+
+**制約**:
+- 半角280文字以内（URLは1つ25文字換算、本文は200文字程度を目安）
+- `#WOW2026 #Tableau Week N is live!` から開始
+
+**参考**: @WorkoutWednsday の過去投稿を確認し、トーンを合わせる
+
+**保存先**: 出題フォルダに `x-post.txt` として保存
+
+**トーン・表現のガイドライン**:
+- em dash（`—`）をつなぎに使わない（AI生成感が出るため。ピリオドやコンマで区切る）
+- 説教臭い・上から目線の表現は避ける（例: 「Before AI analyzes...」のような言い回しはNG）
+- KPIなど具体的なテーマよりも **Viz（ビジュアライゼーション）そのもの** に焦点を当てる
+- 人を誘う表現を使う（`Let's build...`、`Try...`、`Give it a try!`）
+- 細かい仕様（prior month, prior year等）は書かず、シンプルに留める
+- 気軽さを演出（`Quick & light`、`Have fun!`、`Enjoy!`）
+
+**構成例**:
+```
+#WOW2026 #Tableau Week N is live!
+
+[誘い文句 - Let's build... / Try building...]
+
+[難易度・トーン - Quick & light... / Have fun!]
+
+[URL]
+```
