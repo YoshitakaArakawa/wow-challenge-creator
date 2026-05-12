@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WOW 2026 W13 - Viz Extensions Dashboard Prototype</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background: #f5f6fa;
+    color: #2d3436;
+    padding: 24px;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #2d3436;
+    margin-bottom: 20px;
+  }
+  .subtitle {
+    font-size: 12px;
+    color: #888;
+    font-weight: 400;
+    margin-left: 8px;
+  }
+
+  /* Layout: two columns */
+  .main-layout {
+    display: flex;
+    gap: 16px;
+  }
+  .left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 0 0 420px;
+  }
+  .right-col {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* KPI Card */
+  .kpi-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #888;
+    margin-bottom: 4px;
+  }
+  .kpi-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #2d3436;
+  }
+  .kpi-sub {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #888;
+  }
+  .kpi-sparkline {
+    width: 120px;
+    height: 36px;
+  }
+  .kpi-mom {
+    font-weight: 600;
+  }
+  .kpi-mom.positive { color: #00b894; }
+  .kpi-mom.negative { color: #e17055; }
+
+  /* Panels */
+  .panel {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .panel-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 16px;
+  }
+  .sunburst-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .sunburst-container {
+    width: 360px;
+    height: 360px;
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 2px solid #dfe6e9;
+    font-weight: 600;
+    color: #555;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  thead th.num {
+    text-align: right;
+  }
+  tbody td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  tbody td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  tbody tr.category-row td {
+    font-weight: 700;
+    background: #fafafa;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .mom-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .mom-badge.positive {
+    color: #00b894;
+    background: #e6faf5;
+  }
+  .mom-badge.negative {
+    color: #e17055;
+    background: #fdf0ec;
+  }
+</style>
+</head>
+<body>
+
+<h1>Sales Overview <span class="subtitle">Superstore | Dec 2025</span></h1>
+
+<div class="main-layout">
+  <!-- Left column: KPI Card + Sunburst -->
+  <div class="left-col">
+    <div class="kpi-card">
+      <div class="kpi-label">Sales</div>
+      <div class="kpi-value">$98.4K</div>
+      <div class="kpi-sub">
+        <canvas class="kpi-sparkline" id="spark-sales"></canvas>
+        <span class="kpi-mom positive">▲ 12.3% MoM</span>
+      </div>
+    </div>
+    <div class="panel sunburst-panel">
+      <div class="panel-title">Sales by Category / Sub-Category — Dec 2025</div>
+      <div class="sunburst-container">
+        <canvas id="sunburst"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column: Table -->
+  <div class="right-col">
+    <div class="panel" style="height:100%;">
+      <div class="panel-title">Category / Sub-Category Detail — Dec 2025</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Category / Sub-Category</th>
+            <th class="num">Sales</th>
+            <th class="num">MoM</th>
+            <th class="num">Qty</th>
+            <th class="num">MoM</th>
+            <th class="num">Customers</th>
+            <th class="num">MoM</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- Data ---
+const data = {
+  "Technology": {
+    total: { sales: 41200, qty: 489, cust: 134 },
+    mom:   { sales: 15.2, qty: 10.3, cust: -1.5 },
+    subs: {
+      "Phones":       { sales: 18500, qty: 210, cust: 78,  mom: { sales: 18.1, qty: 12.0, cust: 2.1 }},
+      "Accessories":  { sales: 10200, qty: 165, cust: 62,  mom: { sales: 11.4, qty: 8.5,  cust: -4.2 }},
+      "Copiers":      { sales: 7800,  qty: 34,  cust: 18,  mom: { sales: 22.3, qty: 15.0, cust: 5.9 }},
+      "Machines":     { sales: 4700,  qty: 80,  cust: 31,  mom: { sales: 8.7,  qty: 6.2,  cust: -8.3 }},
+    }
+  },
+  "Furniture": {
+    total: { sales: 32800, qty: 412, cust: 108 },
+    mom:   { sales: 9.8, qty: 7.2, cust: -5.1 },
+    subs: {
+      "Chairs":       { sales: 14200, qty: 180, cust: 55,  mom: { sales: 12.5, qty: 9.8,  cust: -2.0 }},
+      "Tables":       { sales: 8900,  qty: 85,  cust: 32,  mom: { sales: 6.1,  qty: 4.5,  cust: -7.8 }},
+      "Bookcases":    { sales: 5400,  qty: 72,  cust: 28,  mom: { sales: 8.3,  qty: 5.1,  cust: -6.5 }},
+      "Furnishings":  { sales: 4300,  qty: 75,  cust: 24,  mom: { sales: 14.0, qty: 10.2, cust: -3.1 }},
+    }
+  },
+  "Office Supplies": {
+    total: { sales: 24400, qty: 346, cust: 142 },
+    mom:   { sales: 10.5, qty: 6.8, cust: -2.8 },
+    subs: {
+      "Storage":      { sales: 6800,  qty: 68,  cust: 38,  mom: { sales: 13.2, qty: 9.0,  cust: 1.5 }},
+      "Binders":      { sales: 5600,  qty: 92,  cust: 45,  mom: { sales: 7.8,  qty: 5.2,  cust: -4.0 }},
+      "Paper":        { sales: 4200,  qty: 88,  cust: 52,  mom: { sales: 9.1,  qty: 6.0,  cust: -1.2 }},
+      "Envelopes":    { sales: 2800,  qty: 42,  cust: 22,  mom: { sales: 15.6, qty: 11.3, cust: -5.8 }},
+      "Labels":       { sales: 2100,  qty: 28,  cust: 18,  mom: { sales: 11.0, qty: 7.5,  cust: -3.5 }},
+      "Art":          { sales: 1700,  qty: 18,  cust: 12,  mom: { sales: 5.2,  qty: 2.1,  cust: -6.0 }},
+      "Appliances":   { sales: 1200,  qty: 10,  cust: 8,   mom: { sales: 8.4,  qty: 4.0,  cust: -2.0 }},
+    }
+  }
+};
+
+// --- Colors ---
+const catColors = {
+  "Technology":      { bg: "#4361ee", light: "#a2b9ff" },
+  "Furniture":       { bg: "#f77f00", light: "#ffc480" },
+  "Office Supplies": { bg: "#2ec4b6", light: "#a0e8e0" },
+};
+
+function subColor(catColor, i, total) {
+  const opacity = 0.5 + 0.5 * ((total - i) / total);
+  return catColor.bg + Math.round(opacity * 255).toString(16).padStart(2, '0');
+}
+
+// --- Sparklines ---
+function sparkline(id, dataPoints, color) {
+  const ctx = document.getElementById(id).getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dataPoints.map((_, i) => i),
+      datasets: [{
+        data: dataPoints,
+        borderColor: color,
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: false,
+        tension: 0.4,
+      }]
+    },
+    options: {
+      responsive: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: { display: false },
+        y: { display: false }
+      }
+    }
+  });
+}
+
+// Jan 2024 – Dec 2025 monthly sales (24 months, realistic pattern)
+const salesMonthly = [
+  52, 48, 55, 61, 58, 63, 67, 59, 72, 78, 68, 74,
+  62, 57, 65, 70, 66, 73, 76, 69, 80, 88, 87.6, 98.4
+];
+sparkline('spark-sales', salesMonthly, '#4361ee');
+
+// --- Sunburst (Doughnut with 2 rings) ---
+const innerLabels = [];
+const innerData = [];
+const innerColors = [];
+const outerLabels = [];
+const outerData = [];
+const outerColors = [];
+
+for (const [cat, info] of Object.entries(data)) {
+  innerLabels.push(cat);
+  innerData.push(info.total.sales);
+  innerColors.push(catColors[cat].bg);
+
+  const subs = Object.entries(info.subs);
+  subs.forEach(([sub, val], i) => {
+    outerLabels.push(sub);
+    outerData.push(val.sales);
+    outerColors.push(subColor(catColors[cat], i, subs.length));
+  });
+}
+
+new Chart(document.getElementById('sunburst').getContext('2d'), {
+  type: 'doughnut',
+  data: {
+    labels: [...innerLabels, ...outerLabels],
+    datasets: [
+      {
+        data: innerData,
+        backgroundColor: innerColors,
+        borderColor: '#fff',
+        borderWidth: 3,
+        weight: 1,
+      },
+      {
+        data: outerData,
+        backgroundColor: outerColors,
+        borderColor: '#fff',
+        borderWidth: 2,
+        weight: 1.5,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    cutout: '30%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => `${ctx.label}: $${ctx.raw.toLocaleString()}`
+        }
+      }
+    }
+  }
+});
+
+// --- Table ---
+const fmt = (n) => '$' + n.toLocaleString();
+const momBadge = (v) => {
+  const cls = v >= 0 ? 'positive' : 'negative';
+  const arrow = v >= 0 ? '▲' : '▼';
+  return `<span class="mom-badge ${cls}">${arrow} ${Math.abs(v).toFixed(1)}%</span>`;
+};
+
+const tbody = document.getElementById('table-body');
+for (const [cat, info] of Object.entries(data)) {
+  const tr = document.createElement('tr');
+  tr.className = 'category-row';
+  tr.innerHTML = `
+    <td>${cat}</td>
+    <td class="num">${fmt(info.total.sales)}</td>
+    <td class="num">${momBadge(info.mom.sales)}</td>
+    <td class="num">${info.total.qty.toLocaleString()}</td>
+    <td class="num">${momBadge(info.mom.qty)}</td>
+    <td class="num">${info.total.cust.toLocaleString()}</td>
+    <td class="num">${momBadge(info.mom.cust)}</td>
+  `;
+  tbody.appendChild(tr);
+
+  for (const [sub, val] of Object.entries(info.subs)) {
+    const sr = document.createElement('tr');
+    sr.innerHTML = `
+      <td style="padding-left:28px; color:#666;">${sub}</td>
+      <td class="num">${fmt(val.sales)}</td>
+      <td class="num">${momBadge(val.mom.sales)}</td>
+      <td class="num">${val.qty.toLocaleString()}</td>
+      <td class="num">${momBadge(val.mom.qty)}</td>
+      <td class="num">${val.cust.toLocaleString()}</td>
+      <td class="num">${momBadge(val.mom.cust)}</td>
+    `;
+    tbody.appendChild(sr);
+  }
+}
+</script>
+</body>
+</html>

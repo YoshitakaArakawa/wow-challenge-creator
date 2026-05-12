@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KPI Trigger Monitor - Prototype</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f6fa;
+    color: #2d3436;
+    padding: 24px;
+  }
+  h1 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #636e72;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+  }
+  .ban-row {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 28px;
+  }
+  .ban-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px 28px;
+    flex: 1;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .ban-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #b2bec3;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+  .ban-value {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .ban-change {
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .positive { color: #00b894; }
+  .negative { color: #d63031; }
+  .chart-container {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin-bottom: 24px;
+  }
+  .chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #636e72;
+    margin-bottom: 16px;
+  }
+  .chart-wrapper {
+    position: relative;
+    height: 260px;
+  }
+  .today-label {
+    font-size: 11px;
+    color: #636e72;
+    text-align: center;
+    margin-top: 4px;
+  }
+  .legend-custom {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 12px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #636e72;
+  }
+  .legend-line {
+    width: 24px;
+    height: 3px;
+    border-radius: 2px;
+  }
+  .legend-line.dashed {
+    background: repeating-linear-gradient(90deg, currentColor 0, currentColor 6px, transparent 6px, transparent 10px);
+    height: 2px;
+  }
+  .note {
+    font-size: 11px;
+    color: #b2bec3;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+  }
+</style>
+</head>
+<body>
+
+<h1>Daily KPI Monitor &mdash; Sample Superstore</h1>
+
+<!-- BAN Cards -->
+<div class="ban-row">
+  <div class="ban-card">
+    <div class="ban-label">Sales (Today)</div>
+    <div class="ban-value">$4,217</div>
+    <div class="ban-change negative">&darr; 18% vs yesterday</div>
+  </div>
+  <div class="ban-card">
+    <div class="ban-label">Profit Ratio (Today)</div>
+    <div class="ban-value">8.2%</div>
+    <div class="ban-change negative">&darr; 4.1pp vs yesterday</div>
+  </div>
+  <div class="ban-card">
+    <div class="ban-label">Sales (14-day avg)</div>
+    <div class="ban-value">$5,034</div>
+    <div class="ban-change positive">&uarr; 6% vs prev year</div>
+  </div>
+  <div class="ban-card">
+    <div class="ban-label">Profit Ratio (14-day avg)</div>
+    <div class="ban-value">11.7%</div>
+    <div class="ban-change negative">&darr; 1.8pp vs prev year</div>
+  </div>
+</div>
+
+<!-- Sales Chart -->
+<div class="chart-container">
+  <div class="chart-title">Sales &mdash; Daily Trend (Day &minus;14 to Day +14)</div>
+  <div class="legend-custom">
+    <div class="legend-item">
+      <div class="legend-line" style="background:#0984e3;"></div>
+      This Year (2024)
+    </div>
+    <div class="legend-item">
+      <div class="legend-line dashed" style="color:#a29bfe;"></div>
+      Last Month Same Period
+    </div>
+    <div class="legend-item">
+      <div class="legend-line dashed" style="color:#b2bec3;"></div>
+      Last Year Same Period
+    </div>
+  </div>
+  <div class="chart-wrapper">
+    <canvas id="salesChart"></canvas>
+  </div>
+</div>
+
+<!-- Profit Ratio Chart -->
+<div class="chart-container">
+  <div class="chart-title">Profit Ratio &mdash; Daily Trend (Day &minus;14 to Day +14)</div>
+  <div class="legend-custom">
+    <div class="legend-item">
+      <div class="legend-line" style="background:#00b894;"></div>
+      This Year (2024)
+    </div>
+    <div class="legend-item">
+      <div class="legend-line dashed" style="color:#a29bfe;"></div>
+      Last Month Same Period
+    </div>
+    <div class="legend-item">
+      <div class="legend-line dashed" style="color:#b2bec3;"></div>
+      Last Year Same Period
+    </div>
+  </div>
+  <div class="chart-wrapper">
+    <canvas id="profitChart"></canvas>
+  </div>
+</div>
+
+<div class="note">
+  Solid line = actual data up to today (Day 0). Dashed lines for prior periods extend to Day +14, showing what happened next in those periods.
+  The gap between the current line ending at Day 0 and the prior period lines continuing forward is the key trigger zone &mdash;
+  "Is the current trend diverging from historical patterns? Should we ask AI to investigate?"
+</div>
+
+<script>
+// Generate realistic-ish daily sales data with some noise
+function generateSalesData(base, volatility, trend, days) {
+  const data = [];
+  let val = base;
+  for (let i = 0; i < days; i++) {
+    val = val + trend + (Math.random() - 0.5) * volatility;
+    // Some days have zero sales (weekend/gap simulation)
+    if (Math.random() < 0.1) {
+      data.push(null);
+    } else {
+      data.push(Math.max(0, Math.round(val)));
+    }
+  }
+  return data;
+}
+
+function generateProfitRatioData(base, volatility, trend, days) {
+  const data = [];
+  let val = base;
+  for (let i = 0; i < days; i++) {
+    val = val + trend + (Math.random() - 0.5) * volatility;
+    if (Math.random() < 0.1) {
+      data.push(null);
+    } else {
+      data.push(parseFloat(Math.max(-5, Math.min(30, val)).toFixed(1)));
+    }
+  }
+  return data;
+}
+
+// Seed random for reproducibility
+let seed = 42;
+const origRandom = Math.random;
+Math.random = function() {
+  seed = (seed * 16807 + 0) % 2147483647;
+  return (seed - 1) / 2147483646;
+};
+
+const labels = [];
+for (let d = -14; d <= 14; d++) {
+  labels.push(d === 0 ? 'Today' : (d > 0 ? '+' + d : '' + d));
+}
+
+// Sales data
+const salesCurrent   = generateSalesData(5200, 2400, -60, 15).concat(Array(14).fill(null)); // -14 to 0, then null
+const salesPrevMonth = generateSalesData(4800, 2200, 20, 29);   // full -14 to +14
+const salesPrevYear  = generateSalesData(4400, 2000, 40, 29);   // full -14 to +14
+
+// Profit ratio data
+const profitCurrent   = generateProfitRatioData(13, 4, -0.3, 15).concat(Array(14).fill(null));
+const profitPrevMonth = generateProfitRatioData(12, 3.5, 0.05, 29);
+const profitPrevYear  = generateProfitRatioData(14, 3, 0.1, 29);
+
+Math.random = origRandom;
+
+const todayLinePlugin = {
+  id: 'todayLine',
+  afterDraw(chart) {
+    const xScale = chart.scales.x;
+    const yScale = chart.scales.y;
+    const todayIndex = 14; // index of "Today" in labels
+    const x = xScale.getPixelForValue(todayIndex);
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = '#636e72';
+    ctx.lineWidth = 1;
+    ctx.moveTo(x, yScale.top);
+    ctx.lineTo(x, yScale.bottom);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = '#636e72';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Today', x, yScale.bottom + 20);
+    ctx.restore();
+  }
+};
+
+Chart.register(todayLinePlugin);
+
+const commonOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  spanGaps: true,
+  interaction: {
+    mode: 'index',
+    intersect: false,
+  },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#2d3436',
+      titleFont: { size: 12 },
+      bodyFont: { size: 12 },
+      padding: 10,
+      cornerRadius: 6,
+    },
+  },
+  scales: {
+    x: {
+      grid: { display: false },
+      ticks: {
+        font: { size: 10 },
+        color: '#b2bec3',
+        callback: function(value, index) {
+          const label = labels[index];
+          if (label === 'Today') return '';
+          if (index % 7 === 0) return label;
+          return '';
+        }
+      }
+    },
+    y: {
+      grid: { color: '#f0f0f0' },
+      ticks: {
+        font: { size: 10 },
+        color: '#b2bec3',
+      }
+    }
+  }
+};
+
+// Sales Chart
+new Chart(document.getElementById('salesChart'), {
+  type: 'line',
+  data: {
+    labels: labels,
+    datasets: [
+      {
+        label: 'This Year',
+        data: salesCurrent,
+        borderColor: '#0984e3',
+        backgroundColor: 'rgba(9,132,227,0.08)',
+        borderWidth: 2.5,
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        tension: 0.3,
+      },
+      {
+        label: 'Last Month',
+        data: salesPrevMonth,
+        borderColor: '#a29bfe',
+        borderWidth: 1.5,
+        borderDash: [6, 4],
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        tension: 0.3,
+      },
+      {
+        label: 'Last Year',
+        data: salesPrevYear,
+        borderColor: '#b2bec3',
+        borderWidth: 1.5,
+        borderDash: [6, 4],
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        tension: 0.3,
+      },
+    ]
+  },
+  options: {
+    ...commonOptions,
+    scales: {
+      ...commonOptions.scales,
+      y: {
+        ...commonOptions.scales.y,
+        ticks: {
+          ...commonOptions.scales.y.ticks,
+          callback: (v) => '$' + (v/1000).toFixed(1) + 'k'
+        }
+      }
+    }
+  }
+});
+
+// Profit Ratio Chart
+new Chart(document.getElementById('profitChart'), {
+  type: 'line',
+  data: {
+    labels: labels,
+    datasets: [
+      {
+        label: 'This Year',
+        data: profitCurrent,
+        borderColor: '#00b894',
+        backgroundColor: 'rgba(0,184,148,0.08)',
+        borderWidth: 2.5,
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        tension: 0.3,
+      },
+      {
+        label: 'Last Month',
+        data: profitPrevMonth,
+        borderColor: '#a29bfe',
+        borderWidth: 1.5,
+        borderDash: [6, 4],
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        tension: 0.3,
+      },
+      {
+        label: 'Last Year',
+        data: profitPrevYear,
+        borderColor: '#b2bec3',
+        borderWidth: 1.5,
+        borderDash: [6, 4],
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        tension: 0.3,
+      },
+    ]
+  },
+  options: {
+    ...commonOptions,
+    scales: {
+      ...commonOptions.scales,
+      y: {
+        ...commonOptions.scales.y,
+        ticks: {
+          ...commonOptions.scales.y.ticks,
+          callback: (v) => v + '%'
+        }
+      }
+    }
+  }
+});
+</script>
+
+</body>
+</html>

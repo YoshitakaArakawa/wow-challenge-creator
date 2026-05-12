@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>WOW2026 W18 — Dataset Table TC25 (image export)</title>
+<style>
+  :root {
+    --ink: #0a2540;
+    --muted: #5a6b82;
+    --accent: #0a2540;
+    --accent-soft: #e8f1ff;
+    --border: #d6e2f0;
+    --chip: #eef3fa;
+    --row-alt: #f7fafd;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+  }
+  .frame {
+    width: 1160px;
+    padding: 24px 28px;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 6px 24px rgba(10, 37, 64, 0.08);
+    display: inline-block;
+  }
+  .table-wrap {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 19px;
+  }
+  thead th {
+    text-align: left;
+    padding: 12px 16px;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--border);
+    background: var(--accent-soft);
+  }
+  tbody td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  tbody tr:nth-child(even) td { background: var(--row-alt); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.col  { width: 170px; white-space: nowrap; }
+  td.desc { width: 480px; white-space: nowrap; }
+  td.desc.wrap { white-space: normal; }
+  td.ex   { width: 450px; }
+  td.col code {
+    font-family: "Menlo", "Consolas", monospace;
+    font-size: 17.5px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  td.ex code {
+    font-family: "Menlo", "Consolas", monospace;
+    font-size: 17px;
+    color: var(--ink);
+  }
+  em { color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Column</th><th>Description</th><th>Example (WOW Live)</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col"><code>id</code></td>
+        <td class="desc wrap">Unique session ID. Multi-day sessions append <code>_slot0</code>, <code>_slot1</code>, …</td>
+        <td class="ex"><code>1230</code></td>
+      </tr>
+      <tr>
+        <td class="col"><code>title</code></td>
+        <td class="desc">Session title.</td>
+        <td class="ex">Community Challenge: Workout Wednesday Live</td>
+      </tr>
+      <tr>
+        <td class="col"><code>date</code></td>
+        <td class="desc">Session date.</td>
+        <td class="ex"><code>2025-04-17</code></td>
+      </tr>
+      <tr>
+        <td class="col"><code>start_time</code></td>
+        <td class="desc">Start time (24h).</td>
+        <td class="ex"><code>08:00</code></td>
+      </tr>
+      <tr>
+        <td class="col"><code>end_time</code></td>
+        <td class="desc">End time (24h).</td>
+        <td class="ex"><code>09:00</code></td>
+      </tr>
+      <tr>
+        <td class="col"><code>session_slot</code></td>
+        <td class="desc">Time range label.</td>
+        <td class="ex"><code>8:00 - 9:00</code></td>
+      </tr>
+      <tr>
+        <td class="col"><code>topic</code></td>
+        <td class="desc">Session category. Sometimes blank.</td>
+        <td class="ex">DataFam, Visualization</td>
+      </tr>
+      <tr>
+        <td class="col"><code>description</code></td>
+        <td class="desc">Session abstract.</td>
+        <td class="ex">Flex your Tableau muscles in this hands-on…</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+</body>
+</html>

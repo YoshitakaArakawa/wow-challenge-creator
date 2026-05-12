@@ -1,8 +1,27 @@
 node_modules/
 package-lock.json
-outputs/
 common/
 nul
+
+# Per-challenge archived assets (not published)
+**/Archived/
+
+# Per-challenge tmp folders (extraction byproducts, screenshots, reference downloads)
+outputs/*/tmp/
+
+# Tableau workbook extraction temp folders (twb extracted from twbx)
+**/.tmp_twb/
+**/twbx-extracted/
+**/twbx-tc25/
+
+# Image outputs (Tableau renders, screenshots, viz exports)
+*.png
+
+# Tableau workbooks (published on Tableau Public — no need to mirror in repo)
+*.twbx
+
+# Local Claude Code settings (per-user, not shared)
+.claude/settings.json
 
 # OS
 .DS_Store
