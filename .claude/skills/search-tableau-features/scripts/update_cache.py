@@ -2,14 +2,14 @@
 Tableau Desktop機能キャッシュ更新スクリプト
 
 Tableau公式サイトからDesktop向け新機能を取得し、
-.claude/skills/tableau-features/features-cache.md に書き出す。
+.claude/skills/search-tableau-features/features-cache.md に書き出す。
 
 サーバーサイドフィルタ (?field_products_target_id=37) を使い、
 Desktop機能のみを取得する。
 
 Usage:
-    python scripts/tableau-features/update_cache.py
-    python scripts/tableau-features/update_cache.py --dry-run   # 画面出力のみ
+    python scripts/search-tableau-features/update_cache.py
+    python scripts/search-tableau-features/update_cache.py --dry-run   # 画面出力のみ
 """
 
 import re

@@ -31,7 +31,7 @@ cp .env.example .env   # Tableau Cloud 認証情報を埋める
 5. **Cloud パブリッシュ** (`publish-to-cloud`) - Tableau Cloud にアップロード
 6. **X 投稿文の作成** (`create-x-post`) - Cloud URL を含めた告知文
 
-任意・分岐: `analyze-twbx`（既存Viz・Cloud上WB解析）、`tableau-features`（新機能検索）。詳細は [CLAUDE.md](CLAUDE.md) のワークフロー節を参照。
+任意・分岐: `analyze-twbx`（既存Viz・Cloud上WB解析）、`search-tableau-features`（新機能検索）。詳細は [CLAUDE.md](CLAUDE.md) のワークフロー節を参照。
 
 ## プロジェクト構成
 
@@ -43,7 +43,7 @@ cp .env.example .env   # Tableau Cloud 認証情報を埋める
   create-workbook/     # .twbx 生成 (テンプレ差分 + チャートレシピ)
   publish-to-cloud/    # Tableau Cloud パブリッシュ
   create-x-post/       # X (Twitter) 投稿文
-  tableau-features/    # Tableau Desktop 機能検索（キャッシュ付き）
+  search-tableau-features/    # Tableau Desktop 機能検索（キャッシュ付き）
 common/                # 共通アセット (テンプレートTWBX、サンプルデータ)
 outputs/               # 出題フォルダ（gitignore対象）
 examples/              # 出題例（WOW2026 W12: https://www.workout-wednesday.com/2026w12tab/）

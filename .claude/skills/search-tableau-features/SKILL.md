@@ -1,6 +1,6 @@
 ---
-name: tableau-features
-description: Tableau Desktopの新機能を検索・一覧表示。「最近の新機能は？」「Sankey関連の機能は？」「機能キャッシュ更新して」で使用。
+name: search-tableau-features
+description: Tableau Desktopの新機能を検索・一覧表示する。キャッシュファイルから検索し、必要なら公式サイトから最新情報を取得して更新する。「最近の新機能は？」「Sankey関連の機能は？」「機能キャッシュ更新して」で使用。
 user-invocable: true
 argument-hint: [検索キーワード or "update"]
 allowed-tools: WebFetch, Read, Write, Glob
@@ -12,7 +12,7 @@ Tableauのメジャーリリースから **Desktop向け機能** を抽出し、
 
 ## キャッシュファイル
 
-- **パス**: `.claude/skills/tableau-features/features-cache.md`
+- **パス**: `.claude/skills/search-tableau-features/features-cache.md`
 - **対象**: 過去1年間のメジャーリリースのみ
 - **フォーマット**: 下記参照
 
@@ -20,7 +20,7 @@ Tableauのメジャーリリースから **Desktop向け機能** を抽出し、
 
 ### 1. キャッシュの確認
 
-`.claude/skills/tableau-features/features-cache.md` をGlobで確認する。
+`.claude/skills/search-tableau-features/features-cache.md` をGlobで確認する。
 
 - **ファイルが存在する場合**: Readで読み込み、`Last updated` の日付を確認
   - ユーザーが「更新して」と明示した場合 → Step 2（強制更新）へ
@@ -54,7 +54,7 @@ Tableauのメジャーリリースから **Desktop向け機能** を抽出し、
 - **Description**: 簡潔な説明（英語、1行）
 
 #### 2d. キャッシュファイルの書き込み
-以下のフォーマットで `.claude/skills/tableau-features/features-cache.md` に保存する:
+以下のフォーマットで `.claude/skills/search-tableau-features/features-cache.md` に保存する:
 
 ```markdown
 <!-- Last updated: YYYY-MM-DD -->
