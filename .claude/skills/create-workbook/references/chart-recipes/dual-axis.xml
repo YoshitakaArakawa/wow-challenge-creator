@@ -1,0 +1,61 @@
+<!--
+  Recipe: dual-axis
+  Description: Dual-axis chart with two measures on a shared X axis.
+  Required placeholders:
+    {{SHEET_NAME}}
+    {{DATASOURCE_NAME}}
+    {{DATASOURCE_CAPTION}}
+    {{FIELD_X}}             - date field, e.g. "[Order Date]"
+    {{FIELD_X_GRANULARITY}} - year|month|...
+    {{FIELD_X_PREFIX}}      - yr|mn|...
+    {{FIELD_Y1}}            - primary measure
+    {{AGG_Y1}}              - lowercase aggregator (e.g. "sum")
+    {{MARK_Y1}}             - mark class: Bar | Line | Circle
+    {{FIELD_Y2}}            - secondary measure
+    {{AGG_Y2}}              - lowercase aggregator
+    {{MARK_Y2}}             - mark class
+    {{COLOR_PRIMARY}}
+    {{COLOR_SECONDARY}}
+-->
+<worksheet name='{{SHEET_NAME}}'>
+  <table>
+    <view>
+      <datasources>
+        <datasource caption='{{DATASOURCE_CAPTION}}' name='{{DATASOURCE_NAME}}'/>
+      </datasources>
+      <datasource-dependencies datasource='{{DATASOURCE_NAME}}'>
+        <column-instance column='{{FIELD_X}}' derivation='{{FIELD_X_GRANULARITY_TITLE}}' name='[{{FIELD_X_PREFIX}}:{{FIELD_X_NAME}}:ok]' pivot='key' type='ordinal'/>
+        <column-instance column='{{FIELD_Y1}}' derivation='{{AGG_Y1_TITLE}}' name='[{{AGG_Y1}}:{{FIELD_Y1_NAME}}:qk]' pivot='key' type='quantitative'/>
+        <column-instance column='{{FIELD_Y2}}' derivation='{{AGG_Y2_TITLE}}' name='[{{AGG_Y2}}:{{FIELD_Y2_NAME}}:qk]' pivot='key' type='quantitative'/>
+      </datasource-dependencies>
+      <aggregation value='true'/>
+    </view>
+    <style/>
+    <panes>
+      <pane>
+        <view>
+          <breakdown value='auto'/>
+        </view>
+        <mark class='{{MARK_Y1}}'/>
+        <style>
+          <style-rule element='mark'>
+            <format attr='mark-color' value='{{COLOR_PRIMARY}}'/>
+          </style-rule>
+        </style>
+      </pane>
+      <pane>
+        <view>
+          <breakdown value='auto'/>
+        </view>
+        <mark class='{{MARK_Y2}}'/>
+        <style>
+          <style-rule element='mark'>
+            <format attr='mark-color' value='{{COLOR_SECONDARY}}'/>
+          </style-rule>
+        </style>
+      </pane>
+    </panes>
+    <rows>{{DATASOURCE_NAME}}.[{{AGG_Y1}}:{{FIELD_Y1_NAME}}:qk] / {{DATASOURCE_NAME}}.[{{AGG_Y2}}:{{FIELD_Y2_NAME}}:qk]</rows>
+    <cols>{{DATASOURCE_NAME}}.[{{FIELD_X_PREFIX}}:{{FIELD_X_NAME}}:ok]</cols>
+  </table>
+</worksheet>

@@ -8,9 +8,9 @@ Workout Wednesday (WOW) Tableau出題を作成するための支援環境。
 
 ## 共通ルール
 
-1. **直近3回と被らない** - 出題前に必ずWeb検索で確認
-2. **難易度はユーザーが指定** - 問題作成時に確認する
-3. **要件は英語＋日本語** - 英語で作成し、日本語も併記
+1. **直近3回と被らない** — 出題前に必ずWeb検索で確認
+2. **難易度はユーザーが指定** — 問題作成時に確認する
+3. **要件は英語＋日本語** — 英語で作成し、日本語も併記
 
 ## 参照URL
 
@@ -19,67 +19,81 @@ Workout Wednesday (WOW) Tableau出題を作成するための支援環境。
 | WOW Tableau出題 | https://workout-wednesday.com/category/tableau/ |
 | Tableau最新機能 | https://www.tableau.com/products/new-features |
 | Tableau全リリース一覧 | https://www.tableau.com/products/all-features |
+| Tableau公式ドキュメントスキーマ | https://github.com/tableau/tableau-document-schemas |
 
-## ワークフロー
+## 出題フォルダ規約
 
-### Step 1: 出題フォルダの作成
-`outputs/` に出題用フォルダを作成する。
+`outputs/YYYY-MM-DD-テーマ名/` に出題用フォルダを作る（英語ケバブケース、例: `outputs/2026-02-05-sankey-drilldown/`）。テーマ未定なら仮名で作成し、確定後にリネーム。すべてのSkillはこのフォルダを共通ワークスペースとして読み書きする。
 
-**命名規則**: `YYYY-MM-DD-テーマ名`（英語ケバブケース）
-- 例: `outputs/2026-02-05-sankey-drilldown/`
-- テーマが未定の場合は仮名で作成し、確定後にリネーム
+## ワークフロー — Skillパイプライン
 
-**フォルダ構成**:
+WOW出題は次のパイプラインで作成する。各ステップは対応するSkillが担当し、Skill間は **出題フォルダのファイル** で連携する。
+
+### 標準パイプライン
+
 ```
-outputs/YYYY-MM-DD-theme-name/
-├── requirements-ja.md   # 要件文（日本語・先に作成）
-├── requirements-en.md   # 要件文（英語・日本語確定後に作成）
-├── discussion.md        # ブレスト・検討の議事録
-└── *.twbx               # ユーザーが作成したワークブック（手動配置）
+[1] brainstorm
+      ↓ (discussion.md に記録、テーマ確定)
+[2] create-requirements   ← 任意で prototype.html を併産
+      ↓ (requirements-{ja,en}.md 確定)
+[3] create-workbook
+      ↓ (WOW{YYYY} W{N}.twbx 生成、Desktop で目視確認)
+[4] publish-to-cloud
+      ↓ (tmp/publish-result.json に Cloud URL)
+[5] create-x-post
+      ↓ (x-post.txt)
 ```
 
-### Step 2: ブレスト
-→ `.claude/skills/brainstorm/SKILL.md` を使用
+### 任意・分岐ステップ
 
-重複チェック → ヒアリング → アイデア展開。結果は `discussion.md` に記録。
+| 条件 | 呼び出すSkill | タイミング |
+|---|---|---|
+| 既存Vizを参考にしたい (.twbx / Tableau Public) | `analyze-twbx` | [2] の前後 |
+| 最新機能を確認したい | `tableau-features` | [1] のブレスト中 |
+| Cloud上のWBをpull して現状確認したい (協働ループ) | `analyze-twbx` (Cloud経路) | [4] 以降のループ |
+| ユーザーが手動でTWBX作成 | — | [3] スキップして配置 → [4] |
+| 出題ごとの非公開アセット | — | `Archived/` に隔離（gitignore済み） |
 
-### Step 2.5: プロトタイプ作成（任意）
-ブレストでVizの方向性が固まったら、Tableau実装前にHTML + Chart.js等でレイアウトのプロトタイプを作成できる。
-- 出題フォルダに `prototype.html` として保存
-- BAN配置、チャートの線の本数・色分け、軸の構成などを素早く視覚化し、認識合わせに使う
-- ユーザーが「イメージを見たい」「プロトを作って」と言った場合に実施
+### 協働ループ (Step 4以降)
 
-### Step 3: 要件作成＋解析
-→ `.claude/skills/create-challenges/SKILL.md` を使用
+publish後はユーザーがCloudで微修正することがある。次のループで反映する:
 
-決定したテーマを正式な要件文に。必要に応じてTableau Public MCPで既存Vizを解析。結果は `requirements.md` に保存。
-
-### Step 4: X投稿文の作成
-出題公開時にXへ投稿する告知文を作成する。
-
-**制約**:
-- 半角280文字以内（URLは1つ25文字換算、本文は200文字程度を目安）
-- `#WOW2026 #Tableau Week N is live!` から開始
-
-**参考**: @WorkoutWednsday の過去投稿を確認し、トーンを合わせる
-
-**保存先**: 出題フォルダに `x-post.txt` として保存
-
-**トーン・表現のガイドライン**:
-- em dash（`—`）をつなぎに使わない（AI生成感が出るため。ピリオドやコンマで区切る）
-- 説教臭い・上から目線の表現は避ける（例: 「Before AI analyzes...」のような言い回しはNG）
-- KPIなど具体的なテーマよりも **Viz（ビジュアライゼーション）そのもの** に焦点を当てる
-- 人を誘う表現を使う（`Let's build...`、`Try...`、`Give it a try!`）
-- 細かい仕様（prior month, prior year等）は書かず、シンプルに留める
-- 気軽さを演出（`Quick & light`、`Have fun!`、`Enjoy!`）
-
-**構成例**:
 ```
-#WOW2026 #Tableau Week N is live!
-
-[誘い文句 - Let's build... / Try building...]
-
-[難易度・トーン - Quick & light... / Have fun!]
-
-[URL]
+[publish-to-cloud] → ユーザーがCloud上で微修正 → [analyze-twbx Cloud経路でpull]
+→ Claudeが差分把握 → [create-workbook 再生成] or 手直し指示 → [publish-to-cloud --overwrite]
 ```
+
+### Skill間ファイル規約
+
+| ファイル | 生成元 | 消費先 |
+|---|---|---|
+| `discussion.md` | brainstorm | create-requirements |
+| `requirements-{ja,en}.md` | create-requirements | create-workbook, create-x-post |
+| `prototype.html` | create-requirements (任意) | create-workbook (参考) |
+| `tmp/workbook-patch.json` | create-workbook | (内部) |
+| `tmp/cloud-pulled.twbx` | analyze-twbx (Cloud経路) | (Claude読み込み) |
+| `*.twbx` | create-workbook | publish-to-cloud |
+| `tmp/publish-result.json` | publish-to-cloud | create-x-post |
+| `backup/{wb}.twbx` | publish-to-cloud (overwrite時) | (ロールバック用) |
+| `x-post.txt` | create-x-post | (最終成果物) |
+
+### 初回セットアップ（依存）
+
+各Skillスクリプトは初回のみ依存のインストールが必要。
+
+```bash
+# analyze-twbx
+cd .claude/skills/analyze-twbx/scripts/twbx && npm install
+cd ../tableau-public && npm install
+cd ../cloud && npm install
+
+# create-workbook
+cd .claude/skills/create-workbook/scripts && npm install
+# 初回XSDスナップショット取得 (任意、必要時)
+npx tsx update-schemas.ts
+
+# publish-to-cloud
+cd .claude/skills/publish-to-cloud/scripts && pip install -r requirements.txt
+```
+
+`.env` はリポジトリ直下に置き（`.env.example` をコピーして使う）、`publish-to-cloud` と `analyze-twbx` の Cloud経路から参照される。

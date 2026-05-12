@@ -1,0 +1,48 @@
+<!--
+  Recipe: bar-chart
+  Description: Single bar chart with categorical X axis and aggregated Y axis.
+  Required placeholders:
+    {{SHEET_NAME}}        - worksheet name (also used to register a window)
+    {{DATASOURCE_NAME}}   - federated.xxxxx (the workbook's primary datasource)
+    {{DATASOURCE_CAPTION}}- e.g. "Sample - Superstore"
+    {{FIELD_X}}           - categorical field, e.g. "[Sub-Category]"
+    {{FIELD_Y}}           - measure field, e.g. "[Sales]"
+    {{AGG_Y}}             - aggregate function name lowercased, e.g. "sum"
+    {{COLOR_PRIMARY}}     - optional hex color, e.g. "#1f77b4"
+  Notes:
+    - column-instance name follows Tableau internal convention: [{{AGG_Y}}:FieldName:qk] for measures, [none:FieldName:nk] for dimensions.
+    - apply-edits.ts handles XML escaping of user-supplied values.
+-->
+<worksheet name='{{SHEET_NAME}}'>
+  <table>
+    <view>
+      <datasources>
+        <datasource caption='{{DATASOURCE_CAPTION}}' name='{{DATASOURCE_NAME}}'/>
+      </datasources>
+      <datasource-dependencies datasource='{{DATASOURCE_NAME}}'>
+        <column-instance column='{{FIELD_X}}' derivation='None' name='[none:{{FIELD_X_NAME}}:nk]' pivot='key' type='nominal'/>
+        <column-instance column='{{FIELD_Y}}' derivation='{{AGG_Y_TITLE}}' name='[{{AGG_Y}}:{{FIELD_Y_NAME}}:qk]' pivot='key' type='quantitative'/>
+      </datasource-dependencies>
+      <aggregation value='true'/>
+    </view>
+    <style/>
+    <panes>
+      <pane>
+        <view>
+          <breakdown value='auto'/>
+        </view>
+        <mark class='Bar'/>
+        <encodings>
+          <color column='{{DATASOURCE_NAME}}.[{{AGG_Y}}:{{FIELD_Y_NAME}}:qk]'/>
+        </encodings>
+        <style>
+          <style-rule element='mark'>
+            <format attr='mark-color' value='{{COLOR_PRIMARY}}'/>
+          </style-rule>
+        </style>
+      </pane>
+    </panes>
+    <rows>{{DATASOURCE_NAME}}.[{{AGG_Y}}:{{FIELD_Y_NAME}}:qk]</rows>
+    <cols>{{DATASOURCE_NAME}}.[none:{{FIELD_X_NAME}}:nk]</cols>
+  </table>
+</worksheet>

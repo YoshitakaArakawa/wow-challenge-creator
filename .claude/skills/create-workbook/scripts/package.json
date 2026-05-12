@@ -1,0 +1,25 @@
+{
+  "name": "create-workbook-scripts",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Hybrid TWB/TWBX generator (template diff + recipe insertion + local schema-driven).",
+  "scripts": {
+    "unpack": "tsx unpack-template.ts",
+    "apply": "tsx apply-edits.ts",
+    "validate": "tsx validate-twb.ts",
+    "repack": "tsx repack-twbx.ts",
+    "check-schemas": "tsx check-schema-updates.ts",
+    "update-schemas": "tsx update-schemas.ts"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "axios": "^1.7.2",
+    "fast-xml-parser": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.6",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  }
+}
