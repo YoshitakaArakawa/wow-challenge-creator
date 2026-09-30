@@ -101,9 +101,13 @@ export function insertCalculatedFields(
     ];
     if (field.defaultFormat) attrs.push(`default-format='${escapeXml(field.defaultFormat)}'`);
 
+    // Raw newlines inside an attribute are normalised to spaces by the XML parser, so a
+    // leading "// comment" line would swallow the rest of the formula. Desktop writes
+    // multi-line formulas as &#13;&#10;.
+    const formula = escapeXml(field.formula).replace(/\r?\n/g, "&#13;&#10;");
     const columnXml =
       `\n    <column ${attrs.join(" ")}>\n` +
-      `      <calculation class='tableau' formula='${escapeXml(field.formula)}'/>\n` +
+      `      <calculation class='tableau' formula='${formula}'/>\n` +
       `    </column>`;
 
     mutated = insertIntoDatasource(mutated, dsName, columnXml);

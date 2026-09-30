@@ -1,4 +1,20 @@
+---
+purpose: create-workbook のパッチ JSON に書く計算式の型集（LOD・表計算・日付・パラメータ・XML エスケープ）
+fetched_at: 2026-10-01
+source_last_known_update: 不明
+note: 式の書き方だけを扱う。XML の骨格は twb-skeleton-cheatsheet.md、Desktop で失敗する落とし穴は twb-pitfalls.md が担当する。
+---
+
 # 計算フィールド / LOD / パラメータ パターン集
+
+## 目次
+- 基本パターン
+- LOD式（ネスト LOD、期間の平均・SD、行ごとの文字列の連結）
+- テーブル計算
+- 日付関数
+- パラメータを使った動的切替
+- カラー条件分岐
+- TWB XMLエスケープのリマインド
 
 create-workbook の `calculatedFields` パッチに書く `formula` を組み立てる際の参考。
 
@@ -41,6 +57,24 @@ RUNNING_SUM(SUM([Sales]))
 ```
 { FIXED [Region] : AVG({ FIXED [Customer ID], [Region] : SUM([Sales]) }) }
 ```
+
+外側の集計は内側 LOD の粒度（顧客ごと1行）で走り、行数で重み付けされない。ビューに `AVG({FIXED [Customer ID] : SUM([Sales])})` を直接置いたときの行重み付けとは違う。
+
+### 期間の平均・標本SD（どのシートでも同じ値）
+```
+// 直前13週の週合計の平均。窓外の週は NULL になり集計から外れる
+{ FIXED [Metric] : AVG({ FIXED [Metric], [Week] : SUM(IF [Weeks Ago] >= 1 AND [Weeks Ago] <= 13 THEN [Value] END) }) }
+{ FIXED [Metric] : STDEV({ FIXED [Metric], [Week] : SUM(IF [Weeks Ago] >= 1 AND [Weeks Ago] <= 13 THEN [Value] END) }) }
+```
+
+窓の条件は内側に置く。外側に置くと行レベルの条件が混ざり、集計が行単位に落ちる。
+
+### 行ごとの文字列を1つのマークに集める
+```
+{ FIXED : MAX(IF [Metric] = 'Sales' THEN [Phrase] END) } + { FIXED : MAX(IF [Metric] = 'Profit' THEN [Phrase] END) }
+```
+
+ディメンションをビューに置かずに、メンバーごとの値を順番を決めて連結する。表計算（`PREVIOUS_VALUE`）と最終行フィルタが要らない。
 
 ## テーブル計算
 
