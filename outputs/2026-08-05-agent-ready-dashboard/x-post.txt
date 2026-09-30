@@ -1,0 +1,7 @@
+#WOW2026 #Tableau Week 31 is live!
+
+Let's build a dashboard small enough to live inside an AI chat. Mobile-sized, self-explanatory, and built entirely in the browser with a Tableau Public published data source.
+
+Quick & light. Have fun!
+
+https://www.workout-wednesday.com/2026w31tab/
