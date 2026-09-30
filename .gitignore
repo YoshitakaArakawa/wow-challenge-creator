@@ -48,3 +48,6 @@ Thumbs.db
 
 # Tableau Desktop auto-recovery files
 *.twbr
+
+# create-workbook: local snapshot of tableau-document-schemas (fetched by update-schemas.ts)
+.claude/skills/create-workbook/references/schemas/

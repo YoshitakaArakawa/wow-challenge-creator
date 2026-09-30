@@ -90,7 +90,11 @@ async function main() {
   const repoRoot = repoRootFrom(import.meta.url);
   const dir = schemasDir(repoRoot);
   const versionPath = versionFilePath(repoRoot);
-  const current = JSON.parse(fs.readFileSync(versionPath, "utf8")) as VersionFile;
+  // .version is a local cache (gitignored); a fresh clone has neither it nor the schemas dir.
+  fs.mkdirSync(dir, { recursive: true });
+  const current: VersionFile = fs.existsSync(versionPath)
+    ? (JSON.parse(fs.readFileSync(versionPath, "utf8")) as VersionFile)
+    : { repo: "tableau/tableau-document-schemas", sha: null, tag: null, last_checked: null, last_updated: null, files: [] };
 
   const args = parseArgs(process.argv.slice(2));
   const target = args.sha ? { sha: args.sha, tag: args.tag ?? null } : await resolveLatestSha();

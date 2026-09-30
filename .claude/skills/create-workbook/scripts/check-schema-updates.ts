@@ -28,11 +28,23 @@ function versionFilePath(repoRoot: string): string {
   );
 }
 
+// .version is a local cache (gitignored); a fresh clone starts from this empty state.
+const EMPTY_VERSION: VersionFile = {
+  repo: "tableau/tableau-document-schemas",
+  sha: null,
+  tag: null,
+  last_checked: null,
+  last_updated: null,
+  files: [],
+};
+
 function loadVersion(filePath: string): VersionFile {
+  if (!fs.existsSync(filePath)) return { ...EMPTY_VERSION };
   return JSON.parse(fs.readFileSync(filePath, "utf8")) as VersionFile;
 }
 
 function saveVersion(filePath: string, data: VersionFile): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n");
 }
 

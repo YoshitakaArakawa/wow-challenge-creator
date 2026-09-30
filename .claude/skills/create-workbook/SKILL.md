@@ -12,7 +12,7 @@ description: 要件文を元にTableauワークブック(.twbx)を生成する�
 **ハイブリッド戦略**（3層）:
 1. **テンプレ流用**: `<workbook>` ルート、データソース、フォント等はテンプレ由来を温存
 2. **レシピ挿入**: 計算フィールド、パラメータ、参照線、デュアル軸など定型は [references/chart-recipes/](references/chart-recipes/) のXMLテンプレを差し替え挿入
-3. **局所スキーマ駆動**: 新規ワークシート全体は [references/twb-skeleton-cheatsheet.md](references/twb-skeleton-cheatsheet.md) と [references/schemas/](references/schemas/) を参照してXMLを書く。参照線・デュアル軸・パラメータ・LOD・フィルタ・ダッシュボードなどの構文は、書く前に [scripts/vendor/tableau-plugin/resources/examples/](scripts/vendor/tableau-plugin/resources/examples/) の同名 JSON で要素の置き場所と属性を確認する（JSON は XML を抽象化した表記。属性名は XSD 検証で確かめる）
+3. **局所スキーマ駆動**: 新規ワークシート全体は [references/twb-skeleton-cheatsheet.md](references/twb-skeleton-cheatsheet.md) と、版に合うXSD（[scripts/vendor/tableau-plugin/resources/schemas/](scripts/vendor/tableau-plugin/resources/schemas/)）を参照してXMLを書く。参照線・デュアル軸・パラメータ・LOD・フィルタ・ダッシュボードなどの構文は、書く前に [scripts/vendor/tableau-plugin/resources/examples/](scripts/vendor/tableau-plugin/resources/examples/) の同名 JSON で要素の置き場所と属性を確認する（JSON は XML を抽象化した表記。属性名は XSD 検証で確かめる）
 
 **ClaudeにTWB XMLを直書きさせず、パッチJSONを介する**。`apply-edits.ts` がパッチを決定論的にXMLに反映する。
 
@@ -148,7 +148,7 @@ XSD検証の結果は「構造が正しい」までで、Desktop で開けるこ
 - [references/calc-field-patterns.md](references/calc-field-patterns.md) — 計算フィールド/LOD/パラメータの実例XML
 - [references/twb-pitfalls.md](references/twb-pitfalls.md) — XSDを通ってもDesktopで失敗・表示崩れする原因と回避規範（引用符・書式・色・線・テキスト・レイアウト・フォルダ分け）
 - [references/chart-recipes/](references/chart-recipes/) — チャート種別ごとのレシピXML（プレースホルダ `{{NAME}}` 形式）
-- [references/schemas/](references/schemas/) — Tableau公式XSDの最新スナップショット（新機能の構文を読む用。`update-schemas.ts` で更新）
+- `references/schemas/` — Tableau公式XSDの最新スナップショットを置く手元キャッシュ（gitignore対象。新機能の構文を読むときに `update-schemas.ts` で取得）
 - [scripts/vendor/tableau-plugin/](scripts/vendor/tableau-plugin/) — `tableau/tableau-plugin` から取り込んだXSD検証スクリプト・版別XSD（2025.1〜2026.2）・構文例JSON（Apache-2.0。出典は `SOURCE.md`）
 
 ## 初回セットアップ
