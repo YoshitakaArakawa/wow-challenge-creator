@@ -114,3 +114,42 @@ WOW2026 W5「KPI Trend Monitor with Period Comparison」（`outputs/2026-02-05-k
 - 前年帯と比べるチャートは、棒を帯より上 / 中 / 下で色分け
 - 固定週 2026-12-20〜12/26 では6問すべて Yes。注文数は13週中7週が前年帯より上、注文単価は13週すべて帯の中
 - 未決: Yes の閾値（帯の下限か、平均か）
+
+## 20261001 追記: 解答ワークブックの再設計（人間が作れる規模へ）
+
+### 出発点
+- v1 の解答ワークブックは計算フィールド 87（Period 8 / Stats 24 / Answers 13 / Labels 27 / Chart Helpers 15）。Desktop では正しく描画されるが、参加者が再現できる規模ではない
+- 目標: 計算フィールドを 20 前後に抑え、熟練 Tableau 作者が自然に選ぶ作り方にする。同時に、継続的に手直しできる可読性・命名・構造にする
+
+### 決定した構造変更（3点）
+1. **データソースで Sales / Profit を Pivot** して `Metric` / `Value` にする。統計・判定は `{FIXED [Metric] : …}` の1本になり、指標ごとの重複が消える
+2. **帯と平均線は Analytics ペイン**（Distribution Band ±1 標本SD、Average 参照線、ペインごと）。1行目は `Is This Week` を列に置いて今週を別ペインにし、左ペインの帯・線が「直前13週・今週除外」を自動で満たす。2行目は今年 / 前年を二重軸にし、前年側の軸に帯・線を引く。Gantt 帯と Lower / Upper / Band Start / Band Size のフィールドが不要になる
+3. **色分け文字列をやめ記号にする**（✓ Yes / ✕ No / ⚠）。ヘッダーは `Metric` を列に置いたテキスト表（Sales 左・Profit 右を手動ソート）
+
+不採用: Metric パラメータ（両指標を同時表示できない）、Measure Names/Values（計算式で参照不可）、表計算による統計（ヘッダーが Week をビューに持たない）
+
+### v2 のフィールド構成（23）
+| フォルダ | フィールド |
+|---|---|
+| 1_Period | Selected Week / Week / Weeks Ago / Is This Week / Week Index |
+| 2_Stats | This Year Value / Last Year Value / This Week Value / Usual Avg / Usual SD / Last Year Avg / Last Year SD |
+| 3_Answers | Usual Position / Usual Answer / Usual Gap / Last Year Position / Last Year Answer / Last Year Gap / Alert Count |
+| 4_Labels | This Week Label / Summary Phrase / Summary / Weeks vs Last Year Range |
+
+- 平均・SD はネスト LOD: `{FIXED [Metric] : STDEV({FIXED [Metric], [Week] : SUM(IF 窓内 THEN [Value] END)})}`。窓条件を内側に置き、窓外の週を NULL にして集計から外す
+- Summary は `{FIXED : MAX(IF [Metric] = 'Sales' THEN [Summary Phrase] END)}` で指標ごとの文を拾って連結（表計算・行フィルタ不要）
+- 13 / 52 週はパラメータにしない（要件が固定、参加者の負荷増）。各式の先頭に `//` コメントで意味を書く
+- 行フィルタは `Weeks Ago` の範囲フィルタ（0–13）と `Week Index` の範囲フィルタ（0–12）で代替し、フィールドにしない
+- 20 に収める候補: 2行目の「前年帯より上 / 下の週数」（−1）、Summary を指標ごと1行に緩める（−1）、Summary 自体を外す（−2）
+
+### 検証結果（Desktop 2026.2、既定週 2026-12-20）
+- pandas の独立計算と全項目一致: Sales vs usual ✕ No / Within / −$695、Profit vs usual ✓ Yes ⚠ / Above / +$141、Sales vs last year ✓ Yes / +$3,495（4 above · 1 below）、Profit vs last year ✓ Yes / +$1,055（0 above · 1 below）、Alerts 1、Summary 文
+- ネスト LOD の外側集計は週単位で走る（行数で重み付けされない）ことを確認
+- Distribution Band は `type='sample'` で標本SD。帯上端 $30,126 = 22,336 + 7,790 で LOD と一致
+- 生成上の落とし穴: ビュー内の手動ソートは `<sort class='manual'>`。XSD が要求する `<manual-sort>` は Desktop が拒否する（XSD と Desktop の食い違い）。`//` コメントを含む式は formula 属性内の改行を `&#13;&#10;` に変換して通した
+
+### 未了
+- ~~1行目のヘッダー非表示~~ 解決: 離散ピルの「ヘッダーの表示」オフは `<style-rule element='label'>` の `<format attr='display' field='…' value='false'/>`（class / scope なし）。`element='header'` の display は無視される
+- 2行目の今週ポイント強調・ラベル重なり
+- ~~要件文の変更~~ 反映済み（ja v10 / en）: Pivot の指示、Gap は両方 $ 差、ヘッダーは2列 + 記号（色は任意）、帯・平均線はアナリティクスペインで可。シート数 6 は維持。フィールド数は 23 で確定（20 への削減は要件削除を伴うため見送り）
+- create-workbook Skill への還元（Analytics ペイン優先、Pivot の検討、ネスト LOD パターン、sort 要素、formula 改行変換）
