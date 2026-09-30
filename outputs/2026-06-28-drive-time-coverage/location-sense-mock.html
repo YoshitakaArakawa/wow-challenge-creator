@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Drive Time 候補データ 位置感Mock(実データ版)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root { font-family: system-ui, "Segoe UI", sans-serif; }
+  body { margin: 0; display: flex; flex-direction: column; height: 100vh; }
+  header { padding: 8px 12px; background: #0d3b66; color: #fff; }
+  header h1 { font-size: 15px; margin: 0 0 4px; }
+  .note { font-size: 11px; color: #ffd; opacity: .9; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+              padding: 8px 12px; background: #f2f4f7; border-bottom: 1px solid #ddd; font-size: 13px; }
+  .controls label { font-weight: 600; }
+  select, input[type=range] { font-size: 13px; }
+  #stat { font-size: 12px; color: #333; }
+  #map { flex: 1; }
+  .legend { background: #fff; padding: 6px 8px; font-size: 12px; line-height: 1.5;
+            box-shadow: 0 1px 4px rgba(0,0,0,.3); border-radius: 4px; }
+  .pill { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; }
+  .hub-pill { background:#e63946; }
+  .pt-pill { background:#1d3557; }
+  .in-pill { background:#2a9d8f; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Drive Time 候補データセット — 位置感Mock(実データ版)</h1>
+  <div class="note">出典: Kaggle <b>starbucks/store-locations</b>(2019, 全世界25,601店)/ <b>malikmuhammadahmed/grocery-store-locations</b>(= Washington <b>D.C.</b> 90店, DC Open Data由来)。円は<b>直線</b>距離の目安で、実Drive Time到達圏ではない点に注意。</div>
+</header>
+
+<div class="controls">
+  <label>データ:
+    <select id="dataset">
+      <option value="sbux_jp">Starbucks — Japan (1,237)</option>
+      <option value="sbux_ca">Starbucks — California (2,821)</option>
+      <option value="dc_grocery">Grocery — Washington D.C. (90)</option>
+    </select>
+  </label>
+  <label>到達圏の目安 半径:
+    <input id="radius" type="range" min="1" max="20" step="1" value="5" />
+    <span id="radiusVal">5</span> km(直線・市街地10〜15分の粗い目安)
+  </label>
+  <span id="stat">読み込み中…</span>
+  <button id="clearHub">Hubクリア</button>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const VIEWS = {
+  sbux_jp:   { center: [36.2, 138.3], zoom: 5  },
+  sbux_ca:   { center: [36.5, -119.4], zoom: 6 },
+  dc_grocery:{ center: [38.905, -77.02], zoom: 12 }
+};
+
+const map = L.map("map");
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19, attribution: "&copy; OpenStreetMap contributors"
+}).addTo(map);
+
+let ptLayer = L.layerGroup().addTo(map);
+let hubLayer = L.layerGroup().addTo(map);
+let ALL = {}, currentPts = [], hub = null, radiusKm = 5;
+
+const legend = L.control({ position: "bottomright" });
+legend.onAdd = function () {
+  const d = L.DomUtil.create("div", "legend");
+  d.innerHTML =
+    '<span class="pill pt-pill"></span>店舗/施設<br>' +
+    '<span class="pill in-pill"></span>円内(直線目安)<br>' +
+    '<span class="pill hub-pill"></span>Hub(クリックで設置)';
+  return d;
+};
+legend.addTo(map);
+
+function haversineKm(a, b) {
+  const R = 6371, toRad = x => x * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+  const s = Math.sin(dLat/2)**2 +
+            Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+function render() {
+  ptLayer.clearLayers();
+  let inCount = 0;
+  for (const p of currentPts) {
+    const inside = hub && haversineKm(hub, p) <= radiusKm;
+    if (inside) inCount++;
+    L.circleMarker([p.lat, p.lng], {
+      radius: 3.2, weight: 0,
+      fillColor: inside ? "#2a9d8f" : "#1d3557",
+      fillOpacity: inside ? 0.95 : 0.55
+    }).bindTooltip(p.city, { direction: "top" }).addTo(ptLayer);
+  }
+  const total = currentPts.length;
+  document.getElementById("stat").textContent =
+    `点数: ${total}` + (hub
+      ? ` / 円内(${radiusKm}km直線): ${inCount} (${(inCount/total*100).toFixed(0)}%)`
+      : "  ※マップをクリックしてHubを置く");
+}
+
+function setHub(latlng) {
+  hub = { lat: latlng.lat, lng: latlng.lng };
+  hubLayer.clearLayers();
+  L.circle([hub.lat, hub.lng], {
+    radius: radiusKm * 1000, color: "#e63946", weight: 2,
+    fillColor: "#e63946", fillOpacity: 0.08
+  }).addTo(hubLayer);
+  L.circleMarker([hub.lat, hub.lng], {
+    radius: 6, color: "#fff", weight: 2, fillColor: "#e63946", fillOpacity: 1
+  }).addTo(hubLayer);
+  render();
+}
+
+function loadDataset(key) {
+  currentPts = ALL[key] || [];
+  hub = null; hubLayer.clearLayers();
+  const v = VIEWS[key];
+  map.setView(v.center, v.zoom);
+  render();
+}
+
+map.on("click", e => setHub(e.latlng));
+document.getElementById("dataset").addEventListener("change", e => loadDataset(e.target.value));
+document.getElementById("radius").addEventListener("input", e => {
+  radiusKm = +e.target.value;
+  document.getElementById("radiusVal").textContent = radiusKm;
+  if (hub) setHub({ lat: hub.lat, lng: hub.lng }); else render();
+});
+document.getElementById("clearHub").addEventListener("click", () => {
+  hub = null; hubLayer.clearLayers(); render();
+});
+
+fetch("data_points.json")
+  .then(r => r.json())
+  .then(json => { ALL = json; loadDataset("sbux_jp"); })
+  .catch(err => { document.getElementById("stat").textContent = "data_points.json 読み込み失敗: " + err; });
+</script>
+</body>
+</html>

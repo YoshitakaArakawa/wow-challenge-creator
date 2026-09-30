@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DC 名所からの Drive Time × Grocery Mock</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root { font-family: system-ui, "Segoe UI", sans-serif; }
+  body { margin:0; display:flex; flex-direction:column; height:100vh; }
+  header { padding:8px 12px; background:#22223b; color:#fff; }
+  header h1 { font-size:15px; margin:0 0 4px; }
+  .note { font-size:11px; color:#c9c9e3; }
+  .controls { display:flex; flex-wrap:wrap; gap:14px; align-items:center;
+              padding:8px 12px; background:#f2f4f7; border-bottom:1px solid #ddd; font-size:13px; }
+  .controls label { font-weight:600; }
+  .kpis { display:flex; gap:10px; margin-left:auto; }
+  .kpi { background:#fff; border:1px solid #ddd; border-radius:6px; padding:4px 12px; text-align:center; min-width:78px; }
+  .kpi b { display:block; font-size:20px; line-height:1.1; color:#4361ee; }
+  .kpi span { font-size:10px; color:#666; }
+  #map { flex:1; }
+  .legend { background:#fff; padding:6px 8px; font-size:12px; line-height:1.6;
+            box-shadow:0 1px 4px rgba(0,0,0,.3); border-radius:4px; }
+  .pill { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+  .lm-pill{background:#f72585;} .in-pill{background:#4361ee;} .out-pill{background:#adb5bd;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Washington D.C. — 名所からの Drive Time 圏内 Grocery 数</h1>
+  <div class="note">起点=名所、円は<b>直線距離の近似</b>(平均25km/h想定で分→kmに換算した代理)。実際の Drive Time 到達圏は道路に沿って歪み、これより内側になりやすい。Grocery: DC Open Data 90店。</div>
+</header>
+
+<div class="controls">
+  <label>名所(起点):
+    <select id="landmark"></select>
+  </label>
+  <label>Drive Time:
+    <input id="minutes" type="range" min="5" max="30" step="1" value="10" />
+    <span id="minVal">10</span> 分
+  </label>
+  <span style="font-size:11px;color:#666;">≈ 半径 <span id="kmVal">–</span> km(直線目安)</span>
+  <div class="kpis">
+    <div class="kpi"><b id="kIn">–</b><span>圏内 Grocery</span></div>
+    <div class="kpi"><b id="kTot">90</b><span>DC内 総数</span></div>
+  </div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// 概算速度: 市街地の実効到達速度(直線換算)。道路迂回を見込んでやや低め。
+const AVG_SPEED_KMH = 25;
+
+const LANDMARKS = [
+  { name: "Lincoln Memorial",      lat: 38.8893, lng: -77.0502 },
+  { name: "Washington Monument",   lat: 38.8895, lng: -77.0353 },
+  { name: "The White House",       lat: 38.8977, lng: -77.0365 },
+  { name: "US Capitol",            lat: 38.8899, lng: -77.0091 },
+  { name: "Union Station",         lat: 38.8977, lng: -77.0063 },
+  { name: "Dupont Circle",         lat: 38.9097, lng: -77.0434 },
+  { name: "Georgetown",            lat: 38.9050, lng: -77.0626 },
+  { name: "National Cathedral",    lat: 38.9304, lng: -77.0707 }
+];
+
+const map = L.map("map").setView([38.905, -77.02], 12);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(map);
+
+let stores = [], origin = LANDMARKS[0], minutes = 10;
+const ptLayer = L.layerGroup().addTo(map);
+const originLayer = L.layerGroup().addTo(map);
+
+const legend = L.control({ position: "bottomright" });
+legend.onAdd = () => {
+  const d = L.DomUtil.create("div", "legend");
+  d.innerHTML =
+    '<span class="pill lm-pill"></span>名所(起点)<br>' +
+    '<span class="pill in-pill"></span>圏内 Grocery<br>' +
+    '<span class="pill out-pill"></span>圏外 Grocery';
+  return d;
+};
+legend.addTo(map);
+
+function haversineKm(a, b) {
+  const R = 6371, toRad = x => x * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+  const s = Math.sin(dLat/2)**2 +
+            Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+const radiusKm = () => minutes / 60 * AVG_SPEED_KMH;
+
+function render() {
+  const r = radiusKm();
+  document.getElementById("kmVal").textContent = r.toFixed(1);
+  document.getElementById("minVal").textContent = minutes;
+
+  ptLayer.clearLayers();
+  let inCount = 0;
+  for (const s of stores) {
+    const inside = haversineKm(origin, s) <= r;
+    if (inside) inCount++;
+    L.circleMarker([s.lat, s.lng], {
+      radius: 4, weight: 0,
+      fillColor: inside ? "#4361ee" : "#adb5bd",
+      fillOpacity: inside ? 0.95 : 0.55
+    }).bindTooltip(s.city, { direction: "top" }).addTo(ptLayer);
+  }
+  document.getElementById("kIn").textContent = inCount;
+  document.getElementById("kTot").textContent = stores.length;
+
+  originLayer.clearLayers();
+  L.circle([origin.lat, origin.lng], {
+    radius: r * 1000, color: "#f72585", weight: 2,
+    fillColor: "#f72585", fillOpacity: 0.06, dashArray: "6 4"
+  }).addTo(originLayer);
+  L.marker([origin.lat, origin.lng]).addTo(originLayer)
+    .bindTooltip(origin.name + " — 圏内 " + inCount + "店", { permanent: true, direction: "top" });
+}
+
+function selectLandmark(name) {
+  origin = LANDMARKS.find(l => l.name === name) || LANDMARKS[0];
+  map.setView([origin.lat, origin.lng], 13);
+  render();
+}
+
+const sel = document.getElementById("landmark");
+for (const l of LANDMARKS) {
+  const o = document.createElement("option");
+  o.value = l.name; o.textContent = l.name; sel.appendChild(o);
+}
+sel.addEventListener("change", e => selectLandmark(e.target.value));
+document.getElementById("minutes").addEventListener("input", e => {
+  minutes = +e.target.value; render();
+});
+
+fetch("dc_grocery.json")
+  .then(r => r.json())
+  .then(j => { stores = j; selectLandmark(LANDMARKS[0].name); })
+  .catch(err => alert("dc_grocery.json 読み込み失敗: " + err));
+</script>
+</body>
+</html>

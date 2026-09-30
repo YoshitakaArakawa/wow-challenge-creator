@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DC Grocery — Drive Time カバレッジ Mock</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root { font-family: system-ui, "Segoe UI", sans-serif; }
+  body { margin: 0; display: flex; flex-direction: column; height: 100vh; }
+  header { padding: 8px 12px; background: #1b4332; color: #fff; }
+  header h1 { font-size: 15px; margin: 0 0 4px; }
+  .note { font-size: 11px; color: #d8f3dc; }
+  .controls { display:flex; flex-wrap:wrap; gap:14px; align-items:center;
+              padding:8px 12px; background:#f2f4f7; border-bottom:1px solid #ddd; font-size:13px; }
+  .controls label { font-weight:600; }
+  .kpis { display:flex; gap:10px; margin-left:auto; }
+  .kpi { background:#fff; border:1px solid #ddd; border-radius:6px; padding:4px 10px; text-align:center; min-width:70px; }
+  .kpi b { display:block; font-size:18px; line-height:1.1; }
+  .kpi.cov b { color:#2a9d8f; } .kpi.gap b { color:#e63946; }
+  .kpi span { font-size:10px; color:#666; }
+  #map { flex:1; }
+  .legend { background:#fff; padding:6px 8px; font-size:12px; line-height:1.6;
+            box-shadow:0 1px 4px rgba(0,0,0,.3); border-radius:4px; }
+  .pill { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+  .hub-pill{background:#e63946;} .cov-pill{background:#2a9d8f;} .gap-pill{background:#1d3557;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Washington D.C. 食料品店カバレッジ — Drive Time 出題プレビュー</h1>
+  <div class="note">データ: DC Open Data 食料品店 90店(Kaggle経由)。<b>地図上の円は直線距離の近似</b>で、本物の Drive Time 到達圏は道路に沿って歪む。実出題ではこの円を Drive Time Area 選択に置き換える。</div>
+</header>
+
+<div class="controls">
+  <span>① 店をクリック→ <b>flagship(拠点)</b> に設定</span>
+  <label>② 到達圏 目安半径:
+    <input id="radius" type="range" min="1" max="8" step="0.5" value="3" />
+    <span id="radiusVal">3.0</span> km
+  </label>
+  <button id="reset">リセット</button>
+  <div class="kpis">
+    <div class="kpi"><b id="kTotal">90</b><span>店舗総数</span></div>
+    <div class="kpi cov"><b id="kCov">–</b><span>圏内カバー</span></div>
+    <div class="kpi gap"><b id="kGap">–</b><span>圏外(空白)</span></div>
+  </div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map = L.map("map").setView([38.905, -77.02], 12);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(map);
+
+let stores = [], hub = null, radiusKm = 3.0;
+const ptLayer = L.layerGroup().addTo(map);
+const hubLayer = L.layerGroup().addTo(map);
+
+const legend = L.control({ position: "bottomright" });
+legend.onAdd = () => {
+  const d = L.DomUtil.create("div", "legend");
+  d.innerHTML =
+    '<span class="pill hub-pill"></span>flagship(拠点)<br>' +
+    '<span class="pill cov-pill"></span>圏内(カバー済み)<br>' +
+    '<span class="pill gap-pill"></span>圏外(食料アクセス空白)';
+  return d;
+};
+legend.addTo(map);
+
+function haversineKm(a, b) {
+  const R = 6371, toRad = x => x * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+  const s = Math.sin(dLat/2)**2 +
+            Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+function nearest(latlng) {
+  let best = null, bd = Infinity;
+  for (const s of stores) {
+    const d = haversineKm(latlng, s);
+    if (d < bd) { bd = d; best = s; }
+  }
+  return best;
+}
+
+function render() {
+  ptLayer.clearLayers();
+  let cov = 0;
+  for (const s of stores) {
+    const isHub = hub && s === hub;
+    const inside = hub && !isHub && haversineKm(hub, s) <= radiusKm;
+    if (inside) cov++;
+    if (isHub) continue; // hubは別レイヤーで描く
+    L.circleMarker([s.lat, s.lng], {
+      radius: 4, weight: 0,
+      fillColor: inside ? "#2a9d8f" : "#1d3557",
+      fillOpacity: inside ? 0.95 : 0.6
+    }).bindTooltip(s.city, { direction: "top" }).addTo(ptLayer);
+  }
+  const total = stores.length;
+  document.getElementById("kTotal").textContent = total;
+  if (hub) {
+    const gap = total - 1 - cov; // hub自身を除く
+    document.getElementById("kCov").textContent = `${cov} (${(cov/(total-1)*100).toFixed(0)}%)`;
+    document.getElementById("kGap").textContent = gap;
+  } else {
+    document.getElementById("kCov").textContent = "–";
+    document.getElementById("kGap").textContent = "–";
+  }
+}
+
+function setHub(store) {
+  hub = store;
+  hubLayer.clearLayers();
+  L.circle([hub.lat, hub.lng], {
+    radius: radiusKm * 1000, color: "#e63946", weight: 2,
+    fillColor: "#e63946", fillOpacity: 0.07, dashArray: "6 4"
+  }).addTo(hubLayer);
+  L.circleMarker([hub.lat, hub.lng], {
+    radius: 7, color: "#fff", weight: 2, fillColor: "#e63946", fillOpacity: 1
+  }).bindTooltip("flagship: " + hub.city, { permanent: false, direction: "top" }).addTo(hubLayer);
+  render();
+}
+
+map.on("click", e => { const s = nearest(e.latlng); if (s) setHub(s); });
+document.getElementById("radius").addEventListener("input", e => {
+  radiusKm = +e.target.value;
+  document.getElementById("radiusVal").textContent = radiusKm.toFixed(1);
+  if (hub) setHub(hub); else render();
+});
+document.getElementById("reset").addEventListener("click", () => {
+  hub = null; hubLayer.clearLayers(); render();
+});
+
+fetch("dc_grocery.json")
+  .then(r => r.json())
+  .then(j => { stores = j; render(); })
+  .catch(err => alert("dc_grocery.json 読み込み失敗: " + err));
+</script>
+</body>
+</html>
