@@ -24,6 +24,7 @@
   --warn-ink: #8a4b00;
   --warn-bg: #fdefd6;
   --warn-edge: #d98a00;
+  --hl: #e8f1fc;
   --ly-band: rgba(143, 141, 132, .26);
   --ty-band: rgba(42, 120, 214, .18);
   --yes-ink: #17693a;
@@ -106,6 +107,9 @@ svg text.lbl-this { fill: var(--ink); font-weight: 600; }
   transform: translate(-50%, calc(-100% - 10px)); white-space: nowrap;
 }
 svg text.mean-lbl { fill: var(--mean); font-size: 9px; font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+svg text.cur-lbl { fill: var(--this); font-size: 11px; font-weight: 700; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+svg text.cur-axis { fill: var(--this); font-weight: 600; }
+.headline { margin: 10px 0 0; font-size: 13.5px; line-height: 1.55; font-weight: 600; color: var(--ink); background: var(--ground); border-radius: 10px; padding: 9px 11px; }
 .note { font-size: 11px; line-height: 1.45; margin: 5px 0 2px; padding: 3px 7px; border-radius: 6px; display: inline-block; }
 .note.in { color: var(--ink-2); background: var(--ground); }
 .note.alert { color: var(--warn-ink); background: var(--warn-bg); font-weight: 600; }
@@ -131,6 +135,7 @@ svg text.mean-lbl { fill: var(--mean); font-size: 9px; font-weight: 600; paint-o
       <div class="eyebrow">Superstore · Weekly check-in</div>
       <h1>今週、私たちはうまくいっている？</h1>
       <div class="tally" id="tally"></div>
+      <p class="headline" id="headline"></p>
       <nav class="strip" id="strip" aria-label="4つの問いの答え"></nav>
     </header>
     <div class="cols" aria-hidden="true"><div>Sales 売上</div><div>Profit 利益</div></div>
@@ -145,30 +150,30 @@ svg text.mean-lbl { fill: var(--mean); font-size: 9px; font-weight: 600; paint-o
 
   <aside class="notes">
     <section>
-      <div class="eyebrow">Prototype v8 · WOW draft</div>
+      <div class="eyebrow">Prototype v9 · WOW draft</div>
       <h2>このプロトタイプについて</h2>
       <p>WOW 公式データリポジトリの <b>Sample - Superstore-2026.xlsx</b> で計算しています。対象週は <b>2026-12-20〜12/26</b> に固定しました。週の選択は Tableau 側のパラメータで実装する前提です。</p>
-      <p>各問いには2段階で答えます。まず Yes / No で「比較期間の平均より良かったか」を答えます。次に、その差が比較期間の範囲に収まっているかを補足します。範囲の外に出た週は「注目」として、ヘッダーのチップにも印を付けます。</p>
+      <p>ヘッダーの一言は、4つの判定結果だけから組み立てた文です。範囲の外に出た問いだけを文にして、残りは「ほかは範囲内です」とまとめます。プッシュ通知で届く文面のひな形のつもりです。</p>
     </section>
     <section>
-      <h2>答えの組み合わせ</h2>
+      <h2>答え方</h2>
       <ul>
-        <li><b>Yes / No ＋ 範囲内</b>: 平均との差はノイズの範囲。特に注視は不要です。</li>
-        <li><b>Yes ＋ 注目</b>: 範囲を大きく上回った異常な伸び。何が効いたかを確認する価値があります。</li>
-        <li><b>No ＋ 注目</b>: 範囲を大きく下回った異常な落ち込み。すぐに原因を確認すべきアラートです。</li>
+        <li><b>Yes / No</b>: 比較期間の平均以上なら Yes、未満なら No。</li>
+        <li><b>補足</b>: 平均との差を事実で書きます。売上は %、利益は差額（$）です。範囲（平均 ± 1標準偏差）の中なら「範囲内」と添えます。</li>
+        <li><b>注目</b>: 範囲の外に出たとき。上限・下限からどれだけはみ出したかを書き、ヘッダーのチップにも印を付けます。</li>
       </ul>
     </section>
     <section>
-      <h2>比較期間</h2>
+      <h2>比較期間（今週は含めない）</h2>
       <ul>
-        <li><b>1行目（普段より良かったか）</b>: 直前13週（今週を含まない）。</li>
-        <li><b>2行目（去年より良かったか）</b>: 前年の同じ13週（52週前にずらした13週）。曜日がそろい、年をまたぐ週もそのまま計算できます。</li>
-        <li>範囲はどちらも、比較期間の平均 ± 1標準偏差です。</li>
+        <li><b>1行目（普段より良かったか）</b>: 今週の直前13週。平均も標準偏差も、今週を含めずに計算します。グラフでも比較の13週と今週を離して描き、帯と平均線は比較の13週の上だけに引いています。</li>
+        <li><b>2行目（去年より良かったか）</b>: 前年の同じ13週（52週前にずらした13週）。今年の値はいっさい含みません。</li>
+        <li>標準偏差は標本標準偏差（Tableau の <b>STDEV</b>）。</li>
       </ul>
     </section>
     <section>
-      <h2>グラフの見せ方</h2>
-      <p>1枚のグラフに線・平均線・帯が重なるので、強さの順番をはっきり分けました。今年の線がいちばん強く（青・太線）、判定の線である平均は濃い灰の破線、前年の線は細い淡い灰、範囲は背景の帯です。帯には枠線を付けていません。平均の値はグラフに書き込まず、答えの下の数字で示しています。</p>
+      <h2>今週の見せ方</h2>
+      <p>どのグラフでも、今週だけを淡い青の縦帯で囲み、青の太い印と値のラベルで示しています。比較期間の要素（灰の棒・前年の線・平均の破線・範囲の帯）は、すべて灰の系統にそろえて後ろに下げました。</p>
     </section>
     <section>
       <h2>この週の読み方</h2>
@@ -190,6 +195,8 @@ const md = t => { const d = new Date(t); return `${d.getUTCMonth() + 1}/${d.getU
 const ymd = t => { const d = new Date(t); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
 const usd = v => (v < 0 ? '−' : '') + '$' + (Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toFixed(1) + 'K' : Math.abs(v).toFixed(0));
 const cnt = v => Math.round(v) + '件';
+const pct = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v * 100).toFixed(1) + '%';
+const usdD = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + '$' + (Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toFixed(1) + 'K' : Math.abs(v).toFixed(0));
 const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
 const sd = a => { const m = mean(a); return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / (a.length - 1)); };
 
@@ -220,21 +227,27 @@ function meanLine(s, y, m, fmt, W_, label) {
 }
 
 // Row 1: this year's last 14 weeks as bars over the prior-13-week range
-function recentBars(key, b, fmt, W_ = 180, H = 100) {
-  const s = svg(W_, H), ws = W.slice(K - 13, K + 1), vals = ws.map(w => w[key]);
-  const lo = Math.min(0, ...vals, b.lo), hi = Math.max(...vals, b.hi) * 1.12;
-  const top = 12, bot = H - 16, y = lin(lo, hi, bot, top), zero = y(0);
-  el('rect', { x: 0, y: y(b.hi), width: W_, height: Math.max(0, y(b.lo) - y(b.hi)), fill: 'var(--ly-band-solid)' }, s);
+function recentBars(key, b, fmt, W_ = 180, H = 104) {
+  // 13 comparison weeks, a gap, then this week in its own highlighted column
+  const s = svg(W_, H), prior = W.slice(K - 13, K), vals = prior.map(w => w[key]).concat(cur[key]);
+  const lo = Math.min(0, ...vals, b.lo), hi = Math.max(...vals, b.hi) * 1.18;
+  const top = 14, bot = H - 16, y = lin(lo, hi, bot, top), zero = y(0);
+  const slot = W_ / 14.8, bw = slot - 3, cmpW = 13 * slot, cx = 13.8 * slot;
+  el('rect', { x: cx - 2, y: 0, width: slot + 4, height: bot + 2, rx: 4, fill: 'var(--hl)' }, s);
+  el('rect', { x: 0, y: y(b.hi), width: cmpW, height: Math.max(0, y(b.lo) - y(b.hi)), fill: 'var(--ly-band-solid)' }, s);
   el('line', { x1: 0, x2: W_, y1: zero, y2: zero, stroke: 'var(--rule)' }, s);
-  const slot = W_ / ws.length, bw = slot - 3;
-  ws.forEach((w, i) => {
-    const last = i === ws.length - 1;
-    el('path', { d: barPath(i * slot + 1.5, zero, y(w[key]), bw, 3), fill: last ? 'var(--this)' : 'var(--context)', 'fill-opacity': last ? 1 : .8 }, s);
+  prior.forEach((w, i) => {
+    el('path', { d: barPath(i * slot + 1.5, zero, y(w[key]), bw, 3), fill: 'var(--context)' }, s);
     el('rect', { x: i * slot, y: top - 10, width: slot, height: bot - top + 10, class: 'hit', 'data-tip': `${ymd(w.start)}週　${fmt(w[key])}` }, s);
   });
-  meanLine(s, y, b.m, fmt, W_, '平均');
-  el('text', { x: 0, y: H - 3 }, s, md(ws[0].start));
-  el('text', { x: W_, y: H - 3, 'text-anchor': 'end' }, s, md(ws[ws.length - 1].start));
+  el('line', { x1: 0, x2: cmpW, y1: y(b.m), y2: y(b.m), stroke: 'var(--mean)', 'stroke-width': 1.25, 'stroke-dasharray': '4 3' }, s);
+  // Guide from the mean to this week so the gap reads directly
+  el('line', { x1: cmpW, x2: cx + slot, y1: y(b.m), y2: y(b.m), stroke: 'var(--mean)', 'stroke-width': 1, 'stroke-dasharray': '1.5 2.5' }, s);
+  el('path', { d: barPath(cx + 1.5, zero, y(cur[key]), bw, 3), fill: 'var(--this)' }, s);
+  el('rect', { x: cx - 2, y: top - 10, width: slot + 4, height: bot - top + 10, class: 'hit', 'data-tip': `今週 ${ymd(cur.start)}　${fmt(cur[key])}` }, s);
+  el('text', { x: W_, y: Math.max(y(cur[key]) - 5, 10), 'text-anchor': 'end', class: 'cur-lbl' }, s, fmt(cur[key]));
+  el('text', { x: cmpW / 2, y: H - 3, 'text-anchor': 'middle' }, s, `直前13週 ${md(prior[0].start)}〜${md(prior[12].start)}`);
+  el('text', { x: W_, y: H - 3, 'text-anchor': 'end', class: 'cur-axis' }, s, '今週');
   return s;
 }
 
@@ -242,30 +255,34 @@ function recentBars(key, b, fmt, W_ = 180, H = 100) {
 const tyW = W.slice(K - 12, K + 1), lyW = W.slice(K - 64, K - 51);
 function yoyLines(key, b, fmt, W_ = 180, H = 112) {
   const s = svg(W_, H), ty = tyW.map(w => w[key]), ly = lyW.map(w => w[key]);
-  const lo = Math.min(0, ...ty, ...ly, b.lo), hi = Math.max(...ty, ...ly, b.hi) * 1.1;
-  const top = 12, bot = H - 16, R = W_ - 6, x = lin(0, 12, 4, R), y = lin(lo, hi, bot, top);
+  const lo = Math.min(0, ...ty, ...ly, b.lo), hi = Math.max(...ty, ...ly, b.hi) * 1.14;
+  const top = 14, bot = H - 16, R = W_ - 8, x = lin(0, 12, 4, R), y = lin(lo, hi, bot, top);
+  const step = (R - 4) / 12;
+  el('rect', { x: x(12) - step / 2 - 2, y: 0, width: W_ - (x(12) - step / 2 - 2), height: bot + 2, rx: 4, fill: 'var(--hl)' }, s);
   el('rect', { x: 0, y: y(b.hi), width: W_, height: Math.max(0, y(b.lo) - y(b.hi)), fill: 'var(--ly-band-solid)' }, s);
   el('line', { x1: 0, x2: W_, y1: y(0), y2: y(0), stroke: 'var(--rule)' }, s);
   el('path', { d: path(ly.map((v, i) => [x(i), y(v)])), fill: 'none', stroke: 'var(--ly-line)', 'stroke-width': 1.25, 'stroke-linejoin': 'round' }, s);
-  meanLine(s, y, b.m, fmt, W_, '前年平均');
+  el('line', { x1: 0, x2: W_, y1: y(b.m), y2: y(b.m), stroke: 'var(--mean)', 'stroke-width': 1.25, 'stroke-dasharray': '4 3' }, s);
   el('path', { d: path(ty.map((v, i) => [x(i), y(v)])), fill: 'none', stroke: 'var(--this)', 'stroke-width': 2.25, 'stroke-linejoin': 'round' }, s);
-  el('circle', { cx: x(12), cy: y(ty[12]), r: 4.5, fill: 'var(--this)', stroke: '#fff', 'stroke-width': 2 }, s);
-  const step = (R - 4) / 12;
-  tyW.forEach((w, i) => el('rect', { x: x(i) - step / 2, y: top - 10, width: step, height: bot - top + 10, class: 'hit', 'data-tip': `${ymd(w.start)}週　今年 ${fmt(ty[i])}　前年 ${fmt(ly[i])}` }, s));
+  el('circle', { cx: x(12), cy: y(ty[12]), r: 5.5, fill: 'var(--this)', stroke: '#fff', 'stroke-width': 2 }, s);
+  const ly12 = y(ty[12]) < (top + bot) / 2 ? y(ty[12]) + 16 : y(ty[12]) - 9;
+  el('text', { x: x(12) - 8, y: ly12, 'text-anchor': 'end', class: 'cur-lbl' }, s, fmt(ty[12]));
+  tyW.forEach((w, i) => el('rect', { x: x(i) - step / 2, y: top - 10, width: step, height: bot - top + 10, class: 'hit', 'data-tip': `${i === 12 ? '今週 ' : ''}${ymd(w.start)}週　今年 ${fmt(ty[i])}　前年 ${fmt(ly[i])}` }, s));
   el('text', { x: 0, y: H - 3 }, s, md(tyW[0].start));
-  el('text', { x: W_, y: H - 3, 'text-anchor': 'end' }, s, md(K && W[K].start));
+  el('text', { x: W_, y: H - 3, 'text-anchor': 'end', class: 'cur-axis' }, s, '今週');
   return s;
 }
 
 const cur = W[K];
 const recent = stats(W.slice(K - 13, K)), lastYear = stats(lyW);
 
+// Yes/No: at or above the comparison mean. The supplement states the gap as a fact and whether it left the range.
 function judge(key, b, scope) {
   const v = cur[key], p = pos(v, b), yes = v >= b.m;
-  const side = yes ? '平均より上' : '平均より下';
+  const gap = key === 's' ? pct(v / b.m - 1) : usdD(v - b.m);
   const note = p === 'in'
-    ? `<span class="note in">${side}だが、${scope}の範囲内。注視は不要</span>`
-    : `<span class="note alert">⚠ 注目：${scope}の範囲を大きく${p === 'above' ? '上回った' : '下回った'}</span>`;
+    ? `<span class="note in">平均比 ${gap}・${scope}の範囲内</span>`
+    : `<span class="note alert">⚠ 注目：${scope}の${p === 'above' ? '上限超え' : '下限割れ'}（${key === 's' ? pct(v / (p === 'above' ? b.hi : b.lo) - 1) : usdD(v - (p === 'above' ? b.hi : b.lo))}）</span>`;
   return { yes, alert: p !== 'in', pos: p, note };
 }
 function upDown(key, b) {
@@ -316,14 +333,19 @@ document.getElementById('strip').innerHTML = groups.map(([label, nos]) =>
   `<div class="grp"><span class="grp-l">${label}</span><div class="grp-c">` +
   nos.map(n => { const c = byNo(n); return `<a href="#r${c.row + 1}" class="${c.yes ? 'yes' : 'no'}${c.alert ? ' alert' : ''}" aria-label="Q${n} ${c.yes ? 'Yes' : 'No'}${c.alert ? '、注目' : ''}"><span class="mark" aria-hidden="true">${c.yes ? '✓' : '✕'}</span>Q${n}</a>`; }).join('') +
   `</div></div>`).join('');
-const yesCount = specs.filter(c => c.yes).length, alerts = specs.filter(c => c.alert);
-document.getElementById('tally').innerHTML = `${ymd(cur.start)}（日）〜 ${md(cur.end)}（土）　4問中 <b>${yesCount}</b> 問が Yes` +
-  (alerts.length ? `・<span class="warn">注目 ${alerts.length}件</span>` : '・注目なし');
+const alerts = specs.filter(c => c.alert);
+document.getElementById('tally').innerHTML = `${ymd(cur.start)}（日）〜 ${md(cur.end)}（土）　` +
+  (alerts.length ? `<span class="warn">注目 ${alerts.length}件</span>` : '注目なし');
 
-const name = { 1: '売上（普段比）', 3: '利益（普段比）', 2: '売上（前年比）', 4: '利益（前年比）' };
+// One-line summary built only from the judgments, the way a pushed notification would read
+const metric = { s: '売上', p: '利益' };
+const alertText = alerts.map(c => `${metric[c.key]}が${c.scope}の範囲を${c.pos === 'above' ? '上回りました' : '下回りました'}`);
+document.getElementById('headline').innerHTML = alerts.length
+  ? `⚠ ${alertText.join('。')}。ほかは範囲内です。`
+  : '今週はすべて範囲内。普段どおりの週です。';
+
 document.getElementById('reading').innerHTML =
-  `注目は ${alerts.map(c => `Q${c.no} ${name[c.no]}（${c.pos === 'above' ? '上振れ' : '下振れ'}）`).join('、') || 'ありません'}。` +
-  `それ以外の問いは、Yes でも No でも比較期間の範囲内で、平均との差はノイズの範囲です。Q1 の売上は普段の平均を少し下回って No ですが、注視は不要です。`;
+  `ヘッダーの一言が、この週の答えです。利益（Q3）は直前13週の範囲の上限を超えたので「注目」です。売上は普段の平均をわずかに下回って Q1 が No ですが、補足のとおり平均比 −3.1% で範囲内です。前年と比べた Q2・Q4 は、どちらも前年平均より上で範囲内でした。`;
 
 const tip = document.getElementById('tip');
 document.addEventListener('pointermove', e => {
