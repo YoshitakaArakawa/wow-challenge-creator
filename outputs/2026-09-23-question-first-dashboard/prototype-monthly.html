@@ -1,4 +1,4 @@
-<title>Superstore 5つの問い</title>
+<title>Superstore Monthly Check-in</title>
 <meta name="color-scheme" content="light only">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -107,9 +107,9 @@ svg text.name { font-family: var(--sans); fill: var(--ink-2); font-size: 11px; }
   <div class="phone" id="phone">
     <header class="phone-head">
       <div class="eyebrow">Superstore · Monthly check-in</div>
-      <h1>今月、私たちはうまくいっている？</h1>
+      <h1>Are we doing well this month?</h1>
       <div class="asof" id="asof"></div>
-      <nav class="strip" id="strip" aria-label="5つの問いの答え"></nav>
+      <nav class="strip" id="strip" aria-label="Answers to the five questions"></nav>
     </header>
     <main id="questions"></main>
   </div>
@@ -145,6 +145,7 @@ const n = M.length, cur = M[n - 1], prev = M[n - 2], py = M[n - 13];
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const lab = d => `${MON[d.mo - 1]} '${String(d.y).slice(2)}`;
 const jp = d => `${d.y}年${d.mo}月`;
+const full = d => `${MON[d.mo - 1]} ${d.y}`;
 const usd = v => '$' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + 'K' : v.toFixed(0));
 const usdK = v => '$' + Math.round(v / 1000) + 'K';
 const pct = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v * 100).toFixed(1) + '%';
@@ -157,29 +158,29 @@ const regions = Object.entries(DATA.regions).map(([k, v]) => ({ k, cur: v.cur, p
 const up = regions.filter(r => r.g > 0).length;
 
 const Q = [
-  { id: 'q1', q: '前月より売れているか？', yes: cur.s > prev.s,
-    kpi: `${pct(cur.s / prev.s - 1)}<small>前月比</small>`,
-    sub: `前月 <b>${usd(prev.s)}</b> → 今月 <b>${usd(cur.s)}</b>`,
+  { id: 'q1', q: 'Are we selling more than last month?', qj: '前月より売れているか？', yes: cur.s > prev.s,
+    kpi: `${pct(cur.s / prev.s - 1)}<small>vs last month</small>`,
+    sub: `Last month <b>${usd(prev.s)}</b> → This month <b>${usd(cur.s)}</b>`,
     val: pct(cur.s / prev.s - 1), vs: `${jp(prev)} vs ${jp(cur)}`, draw: q1 },
-  { id: 'q2', q: '前年同月より売れているか？', yes: cur.s > py.s,
-    kpi: `${pct(cur.s / py.s - 1)}<small>前年同月比</small>`,
-    sub: `前年同月 <b>${usd(py.s)}</b> → 今月 <b>${usd(cur.s)}</b>`,
+  { id: 'q2', q: 'Are we selling more than the same month last year?', qj: '前年同月より売れているか？', yes: cur.s > py.s,
+    kpi: `${pct(cur.s / py.s - 1)}<small>vs same month last year</small>`,
+    sub: `Same month last year <b>${usd(py.s)}</b> → This month <b>${usd(cur.s)}</b>`,
     val: pct(cur.s / py.s - 1), vs: `${jp(py)} vs ${jp(cur)}`, draw: q2 },
-  { id: 'q3', q: 'トレンドは上向きか？', yes: sum12 > sum12p,
-    kpi: `${pct(sum12 / sum12p - 1)}<small>直近12か月・前年比</small>`,
-    sub: `前の12か月 <b>${usd(sum12p)}</b> → 直近12か月 <b>${usd(sum12)}</b>`,
+  { id: 'q3', q: 'Is the trend heading up?', qj: 'トレンドは上向きか？', yes: sum12 > sum12p,
+    kpi: `${pct(sum12 / sum12p - 1)}<small>last 12 months vs prior 12</small>`,
+    sub: `Prior 12 months <b>${usd(sum12p)}</b> → Last 12 months <b>${usd(sum12)}</b>`,
     val: pct(sum12 / sum12p - 1), vs: '直近12か月合計 vs その前の12か月', draw: q3 },
-  { id: 'q4', q: '利益はついてきているか？', yes: cur.pr >= py.pr,
+  { id: 'q4', q: 'Is profit keeping up?', qj: '利益はついてきているか？', yes: cur.pr >= py.pr,
     kpi: `${pr(cur.pr)}<small>Profit Ratio</small>`,
-    sub: `前年同月 <b>${pr(py.pr)}</b> から <b>${pt(cur.pr - py.pr)}</b>`,
+    sub: `Same month last year <b>${pr(py.pr)}</b> → <b>${pt(cur.pr - py.pr)}</b>`,
     val: `${pr(cur.pr)}（${pt(cur.pr - py.pr)}）`, vs: `${jp(py)} vs ${jp(cur)}`, draw: q4 },
-  { id: 'q5', q: '伸びは全体に広がっているか？', yes: up > regions.length / 2,
-    kpi: `${up} / ${regions.length}<small>Region が前年同月比プラス</small>`,
-    sub: `過半数の Region が伸びていれば Yes`,
+  { id: 'q5', q: 'Is the growth broad-based?', qj: '伸びは全体に広がっているか？', yes: up > regions.length / 2,
+    kpi: `${up} / ${regions.length}<small>regions up year-over-year</small>`,
+    sub: `Yes if more than half of regions are growing`,
     val: `${up} / ${regions.length}`, vs: `Region 別 ${jp(py)} vs ${jp(cur)}`, draw: q5 },
 ];
 
-document.getElementById('asof').textContent = `${jp(cur)} 時点（データ内の最新月）`;
+document.getElementById('asof').textContent = `As of ${full(cur)} (latest month in data)`;
 
 const NS = 'http://www.w3.org/2000/svg';
 function el(tag, attrs, parent, text) {
@@ -206,12 +207,12 @@ function q1() {
     const x = i * slot + 3, h = base - y(d.s);
     const fill = i === data.length - 1 ? 'var(--this)' : i === data.length - 2 ? 'var(--prior)' : 'var(--context)';
     el('path', { d: roundTopBar(x, y(d.s), w, h, 4), fill }, s);
-    el('rect', { x: i * slot, y: top - 14, width: slot, height: base - top + 14, class: 'hit', 'data-tip': `${lab(d)}　Sales ${usd(d.s)}` }, s);
+    el('rect', { x: i * slot, y: top - 14, width: slot, height: base - top + 14, class: 'hit', 'data-tip': `${lab(d)}  Sales ${usd(d.s)}` }, s);
     if (i === data.length - 2) el('text', { x: x + w, y: y(d.s) - 5, 'text-anchor': 'end', class: 'lbl' }, s, usdK(d.s));
     if (i === data.length - 1) el('text', { x: x + w, y: y(d.s) - 5, 'text-anchor': 'end', class: 'lbl-this' }, s, usdK(d.s));
   });
   [0, 6, 12].forEach(i => el('text', { x: i * slot + slot / 2, y: base + 16, 'text-anchor': 'middle' }, s, lab(data[i])));
-  s.setAttribute('aria-label', '直近13か月の月次 Sales。今月と前月を強調');
+  s.setAttribute('aria-label', 'Monthly Sales for the last 13 months. This month and last month highlighted.');
   return s;
 }
 
@@ -252,8 +253,8 @@ function q2() {
     ],
     labels: [[0, 'Jan'], [5, 'Jun'], [11, 'Dec']],
     fmtY: v => usd(v),
-    fmtTip: i => `${MON[i]}　${cur.y}: ${usd(yc[i].s)}　${cur.y - 1}: ${usd(yp[i].s)}` });
-  s.setAttribute('aria-label', `${cur.y}年と${cur.y - 1}年の月次 Sales を重ねた折れ線`);
+    fmtTip: i => `${MON[i]}  ${cur.y}: ${usd(yc[i].s)}  ${cur.y - 1}: ${usd(yp[i].s)}` });
+  s.setAttribute('aria-label', `Monthly Sales for ${cur.y} vs ${cur.y - 1}, overlaid line chart`);
   return s;
 }
 
@@ -263,12 +264,12 @@ function q3() {
   const s = lineChart({ h: 136, xs: n, ymax,
     series: [
       { vals: M.map(d => d.s), color: 'var(--context)', w: 1.5 },
-      { vals: M.map(d => d.ma), color: 'var(--this)', end: '12M平均', cls: 'lbl-this' },
+      { vals: M.map(d => d.ma), color: 'var(--this)', end: '12M avg', cls: 'lbl-this' },
     ],
     labels: years.map(yy => [M.findIndex(d => d.y === yy), String(yy)]).slice(1),
     fmtY: v => usd(v),
-    fmtTip: i => `${lab(M[i])}　Sales ${usd(M[i].s)}` + (M[i].ma ? `　12M平均 ${usd(M[i].ma)}` : '') });
-  s.setAttribute('aria-label', '月次 Sales と12か月移動平均');
+    fmtTip: i => `${lab(M[i])}  Sales ${usd(M[i].s)}` + (M[i].ma ? `  12M avg ${usd(M[i].ma)}` : '') });
+  s.setAttribute('aria-label', 'Monthly Sales with 12-month moving average');
   return s;
 }
 
@@ -279,10 +280,10 @@ function q4() {
     series: [{ vals: data.map(d => d.pr), color: 'var(--this)', dots: [12], end: pr(cur.pr), cls: 'lbl-this' }],
     labels: [[0, lab(data[0])], [12, lab(data[12])], [24, lab(data[24])]],
     fmtY: v => pr(v),
-    fmtTip: i => `${lab(data[i])}　Profit Ratio ${pr(data[i].pr)}` });
+    fmtTip: i => `${lab(data[i])}  Profit Ratio ${pr(data[i].pr)}` });
   const x = lin(0, 24, 4, 300), y = lin(0, ymax, 136 - 24, 14);
   el('text', { x: x(12), y: y(data[12].pr) - 9, 'text-anchor': 'middle', class: 'lbl' }, s, pr(data[12].pr));
-  s.setAttribute('aria-label', '直近25か月の Profit Ratio 推移。前年同月と今月に点');
+  s.setAttribute('aria-label', 'Profit Ratio over the last 25 months. Dots mark the same month last year and this month.');
   return s;
 }
 
@@ -301,9 +302,9 @@ function q5() {
       : `M${bx + bw} ${yy}H${bx + rr}Q${bx} ${yy} ${bx} ${yy + rr}V${yy + 16 - rr}Q${bx} ${yy + 16} ${bx + rr} ${yy + 16}H${bx + bw}Z`;
     el('path', { d, fill: r.g >= 0 ? 'var(--this)' : 'var(--context)' }, s);
     el('text', { x: r.g >= 0 ? bx + bw + 6 : 306, y: yy + 12, class: r.g >= 0 ? 'lbl-this' : 'lbl' }, s, pct(r.g));
-    el('rect', { x: 0, y: yy - 4, width: 360, height: rowH, class: 'hit', 'data-tip': `${r.k}　${usd(r.py)} → ${usd(r.cur)}（${pct(r.g)}）` }, s);
+    el('rect', { x: 0, y: yy - 4, width: 360, height: rowH, class: 'hit', 'data-tip': `${r.k}  ${usd(r.py)} → ${usd(r.cur)} (${pct(r.g)})` }, s);
   });
-  s.setAttribute('aria-label', 'Region 別の前年同月比');
+  s.setAttribute('aria-label', 'Year-over-year change by region');
   return s;
 }
 
@@ -318,7 +319,7 @@ Q.forEach((q, i) => {
     <p class="sub">${q.sub}</p>`;
   sec.appendChild(q.draw());
   host.appendChild(sec);
-  tb.insertAdjacentHTML('beforeend', `<tr><td>Q${i + 1} ${q.q}</td><td>${word}</td><td class="num">${q.val}</td><td>${q.vs}</td></tr>`);
+  tb.insertAdjacentHTML('beforeend', `<tr><td>Q${i + 1} ${q.qj}</td><td>${word}</td><td class="num">${q.val}</td><td>${q.vs}</td></tr>`);
 });
 
 const tip = document.getElementById('tip');
