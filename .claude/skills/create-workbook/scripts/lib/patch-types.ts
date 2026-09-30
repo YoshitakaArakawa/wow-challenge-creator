@@ -31,6 +31,7 @@ export interface CalculatedFieldSpec {
   datatype: "string" | "integer" | "real" | "boolean" | "date" | "datetime";
   role: "measure" | "dimension";
   type?: "quantitative" | "ordinal" | "nominal";
+  /** May contain newlines and `//` comments; they are encoded as &#13;&#10; in the TWB. */
   formula: string;
   defaultFormat?: string;
   /** Data pane folder name (e.g. "2_Stats"). Omitted = no folder. */

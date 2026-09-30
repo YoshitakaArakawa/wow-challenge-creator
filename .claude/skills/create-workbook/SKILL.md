@@ -16,6 +16,20 @@ description: 要件文を元にTableauワークブック(.twbx)を生成する�
 
 **ClaudeにTWB XMLを直書きさせず、パッチJSONを介する**。`apply-edits.ts` がパッチを決定論的にXMLに反映する。
 
+### 参加者が再現できる規模にする
+
+WOW の解答は人間が作り直すもの。動くだけでなく、熟練の Tableau 作者が自然に選ぶ作り方にする。
+
+- 計算フィールドは 1 判定あたり 5 前後、全体で 25 以内を目安にする。超えたらフィールドを削る前に構造を疑う
+- 平均線と「平均 ± n SD」の帯はアナリティクスペイン相当の参照線で描き、フィールドにしない。除外したいマーク（今週など）は別ペインに分ける
+- 指標が複数あるときは、データソースで Pivot して 1 組の計算でまかなう。Measure Names は計算式で参照できず、パラメータ切替は同時表示できない
+- 文字列の色分けは 1 色 1 フィールドかかる。記号（✓ ✕ ⚠）で代替できないか先に検討する
+- 各式の先頭に `//` で「なぜ」を 1 行書く。定数（13 週など）は要件で固定ならパラメータにせず、コメントで意味を書く
+- 命名は「指標・比較軸 → 統計量」の順（例：`Usual Avg` / `Last Year SD`）にし、同種のフィールドが並ぶようにする。フォルダは番号付き
+- 判定は boolean、3 値以上の状態だけ文字列にする
+
+式の型は [references/calc-field-patterns.md](references/calc-field-patterns.md)（ネスト LOD の平均・SD、行ごとの文字列の連結）を使う。
+
 ## 標準手順
 
 ### Step 1: 前提確認
@@ -71,6 +85,8 @@ Step 3・3b で失敗したら、エラーメッセージを元にパッチJSON�
 XSD検証の結果は「構造が正しい」までで、Desktop で開けることは保証しない：
 - 計算式・フィールド参照・データソース接続は検証対象外
 - `document-format-change-manifest` の機能フラグに依存する属性（例: パラメータの `period-type-v2`、参照線の `tooltip-type`）は XSD を通っても Desktop で拒否される。新しい属性は、テンプレと同じ `source-build`・同じ manifest を持つ実ブックに現れるものだけを使う
+- 逆に XSD が要求しても Desktop が拒否する要素がある（例: 手動ソートは `<manual-sort>` ではなく `<sort class='manual'>`）。Desktop で開けるならその XSD エラーは無視する。既知の食い違いは [references/twb-pitfalls.md](references/twb-pitfalls.md) にある
+- 構文が分からない要素は推測で書かず、Desktop で同じ操作をして `.twb` に別名保存し、その XML を写す
 
 ### Step 5: 目視確認 → パブリッシュへ
 
@@ -139,6 +155,7 @@ XSD検証の結果は「構造が正しい」までで、Desktop で開けるこ
 - `recipe` は `references/chart-recipes/{recipe}.xml` のファイル名から `.xml` を除いたもの
 - `recipe`/`rawXml` どちらか一方を指定（両方なら `rawXml` 優先）
 - `dataSourceSwap` は Phase 2 で使用、Phase 1 は `null` 固定
+- `calculatedFields[].formula` には改行と `//` コメントを書いてよい（TWB では `&#13;&#10;` に変換される）
 - `calculatedFields[].folder` を指定すると、データペインのそのフォルダに入る（`<folders-common>` に追記。同名フォルダがあれば合流）。フォルダの切り方は [references/twb-pitfalls.md](references/twb-pitfalls.md) の「計算フィールドの整理」に従う
 - `workingDir` を省略すると `outputPath` のディレクトリ + `tmp/wb-build` を自動使用
 
