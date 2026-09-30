@@ -17,6 +17,7 @@
   --this: #2a78d6;
   --prior: #8f8d84;
   --context: #d6d3c8;
+  --below: #eb6834;
   --yes-ink: #17693a;
   --yes-bg: #e2f1e7;
   --no-ink: #a3281f;
@@ -104,7 +105,7 @@ svg text.lbl-this { fill: var(--ink); font-weight: 600; }
       <div class="eyebrow">Superstore · Weekly check-in</div>
       <h1>今週、私たちはうまくいっている？</h1>
       <div class="tally" id="tally"></div>
-      <nav class="strip" id="strip" aria-label="8つの問いの答え"></nav>
+      <nav class="strip" id="strip" aria-label="6つの問いの答え"></nav>
     </header>
     <div class="cols" aria-hidden="true"><div>Sales 売上</div><div>Profit 利益</div></div>
     <main id="rows"></main>
@@ -112,30 +113,27 @@ svg text.lbl-this { fill: var(--ink); font-weight: 600; }
 
   <aside class="notes">
     <section>
-      <div class="eyebrow">Prototype v3 · WOW draft</div>
+      <div class="eyebrow">Prototype v4 · WOW draft</div>
       <h2>このプロトタイプについて</h2>
       <p>WOW 公式データリポジトリの <b>Sample - Superstore-2026.xlsx</b> で計算しています。対象週は <b>2026-12-20〜12/26</b> に固定しました。週の選択は Tableau 側のパラメータで実装する前提です。</p>
-      <p>売上（Q1〜Q3）と利益（Q4〜Q6）を同じ3つの問いで横に並べました。その下に、売上の中身として注文数（Q7）と注文単価（Q8）を置いています。</p>
+      <p>問いは2種類だけです。「最近の自分たちと比べて普段並みか」と「去年の同じ時期と比べてどうか」。これを売上・利益・注文数・注文単価の4つの指標で答えます。チャートは1種類（棒 + 帯）にそろえました。</p>
+    </section>
+    <section>
+      <h2>帯の読み方</h2>
+      <p>1行目の帯は、直前13週の平均 ± 1標準偏差です。2行目以降の帯は、<b>前年の同じ13週</b>（52週前にずらした13週）の平均 ± 1標準偏差です。棒は今年の直近13週です。</p>
+      <p>2行目以降では、棒を帯との位置で塗り分けています。<span style="color:var(--this);font-weight:600">青は帯より上</span>、灰は帯の中、<span style="color:var(--below);font-weight:600">橙は帯より下</span>です。今週（右端）だけ濃く塗っています。今週だけの話なのか、ここ数週ずっとそうなのかが、色の並びで分かります。</p>
     </section>
     <section>
       <h2>この週の読み方</h2>
-      <p>売上は前年同週を下回りました（Q2 No）。ところが注文数は前年の 39件から 55件に増えています（Q7 Yes）。下がったのは注文単価です（Q8 No）。「客は増えている。大口が来なかっただけ」と読めます。</p>
-      <p>直近13週で見ると、売上は前年を大きく上回っています（Q3 Yes）。一方で利益は前年を下回りました（Q6 No）。「売れているのに儲かっていない」ことが、この週だけの話ではないと分かります。</p>
+      <p id="reading"></p>
     </section>
     <section>
-      <h2>定義</h2>
+      <h2>外した問い</h2>
       <ul>
-        <li><b>週</b>: 日曜始まり・土曜終わり。</li>
-        <li><b>普段並み</b>: 直前13週の平均 − 1標準偏差以上なら Yes。帯がその範囲です。利益は赤字週なら No。</li>
-        <li><b>前年同週</b>: 52週前の週。曜日がそろいます。</li>
-        <li><b>直近13週</b>: 対象週を含む13週の合計を、52週前からの同じ13週と比べます。長さが一定なので、累計のように年の後半ほど動かなくなることがありません。</li>
-        <li><b>注文単価</b>: 売上 ÷ 注文数（Order ID のユニーク数）。</li>
-        <li>利益の答えは % ではなく差額（$）で示します。利益がゼロ付近やマイナスの週があるためです。</li>
+        <li><b>前年同週との1対1比較</b>: 週の売上は上位5注文が平均72%を占めるため、1週どうしの比較は大口の有無で決まってしまいます。前年の13週の帯と比べる形に置き換えました。</li>
+        <li><b>直近13週の合計・年累計</b>: 表示期間の途中で1度大きく上回ると、その後ずっと上回って見えます。今週の状態を問う目的に合わないため削除しました。</li>
+        <li><b>顧客数</b>: 週単位では注文数と相関 0.998 で、答えが重複します。</li>
       </ul>
-    </section>
-    <section>
-      <h2>顧客数を入れなかった理由</h2>
-      <p>週単位では、注文数と顧客数がほぼ同じ動きをします（相関 0.998、差は週平均 0.6）。同じ週に2回注文する顧客がほとんどいないためです。両方を並べても答えが重複するので、売上を分解できる注文単価を選びました。</p>
     </section>
   </aside>
 </div>
@@ -220,37 +218,53 @@ function pairLines(cur, prev, fmt, tipLabel, W_ = 180, H = 84) {
 const cur = W[K], ly = W[K - 52];
 const hist = W.slice(K - 13, K), last14 = W.slice(K - 13, K + 1);
 const band = key => { const a = hist.map(w => w[key]); const m = mean(a), s = sd(a); return [m - s, m + s, m]; };
-const c13 = W.slice(K - 12, K + 1), p13 = W.slice(K - 64, K - 51);
-// Rolling 13-week sums for the last 26 weeks, this year and 52 weeks earlier
-const roll = (k, key) => sum(W.slice(k - 12, k + 1), key);
-const span = Array.from({ length: 26 }, (_, i) => K - 25 + i);
+const lyW = W.slice(K - 64, K - 51);   // last year's same 13 weeks
+const tyW = W.slice(K - 12, K + 1);    // this year's latest 13 weeks
+const lyBand = key => { const a = lyW.map(w => w[key]); const m = mean(a), s = sd(a); return [m - s, m + s, m]; };
 
-function withAxis(s, first, last, H = 84, W_ = 180) {
-  el('text', { x: 0, y: H - 3 }, s, first);
-  el('text', { x: W_, y: H - 3, 'text-anchor': 'end' }, s, last);
+// Bars of this year's weeks against last year's same-period band, colored by position
+function lyBars(key, band, fmt, W_ = 180, H = 84) {
+  const s = svg(W_, H), vals = tyW.map(w => w[key]);
+  const lo = Math.min(0, ...vals, band[0]), hi = Math.max(...vals, band[1]) * 1.12;
+  const top = 14, bot = H - 16, y = lin(lo, hi, bot, top), zero = y(0);
+  el('rect', { x: 0, y: y(band[1]), width: W_, height: Math.max(0, y(band[0]) - y(band[1])), fill: 'var(--band)' }, s);
+  el('line', { x1: 0, x2: W_, y1: y(band[2]), y2: y(band[2]), stroke: 'var(--prior)', 'stroke-dasharray': '3 3' }, s);
+  el('line', { x1: 0, x2: W_, y1: zero, y2: zero, stroke: 'var(--rule)' }, s);
+  const slot = W_ / tyW.length, bw = slot - 3;
+  tyW.forEach((w, i) => {
+    const v = w[key], pos = v > band[1] ? 'above' : v < band[0] ? 'below' : 'in';
+    const fill = pos === 'above' ? 'var(--this)' : pos === 'below' ? 'var(--below)' : 'var(--context)';
+    const last = i === tyW.length - 1;
+    el('path', { d: barPath(i * slot + 1.5, zero, y(v), bw, 3), fill, 'fill-opacity': last ? 1 : 0.5 }, s);
+    const lyv = lyW[i][key];
+    el('rect', { x: i * slot, y: top - 10, width: slot, height: bot - top + 10, class: 'hit', 'data-tip': `${ymd(w.start)}週　${fmt(v)}（前年同週 ${fmt(lyv)}）` }, s);
+  });
+  el('text', { x: W_, y: Math.max(y(vals[vals.length - 1]) - 4, 9), 'text-anchor': 'end', class: 'lbl-this' }, s, fmt(vals[vals.length - 1]));
+  el('text', { x: 0, y: H - 3 }, s, md(tyW[0].start));
+  el('text', { x: W_, y: H - 3, 'text-anchor': 'end' }, s, md(cur.start));
   return s;
 }
-const wkTip = arr => i => `${ymd(arr[i].start)}週`;
+const tally = (key, band) => {
+  const up = tyW.filter(w => w[key] > band[1]).length, dn = tyW.filter(w => w[key] < band[0]).length;
+  return `13週中 上 <b>${up}</b>・中 <b>${13 - up - dn}</b>・下 <b>${dn}</b>`;
+};
 
 const bs = band('s'), bp = band('p');
-const r13s = [sum(c13, 's'), sum(p13, 's')], r13p = [sum(c13, 'p'), sum(p13, 'p')];
+const ls = lyBand('s'), lp = lyBand('p'), lo_ = lyBand('o'), la = lyBand('aov');
+const lyNote = `前年 ${ymd(lyW[0].start)}〜${md(lyW[12].end)} の13週と比べて`;
 
 const ROWS = [
   { q: '今週は普段並み以上だったか？', note: '直前13週と比べて', cells: [
     { no: 1, yes: cur.s >= bs[0], kpi: usd(cur.s), sub: `普段 <b>${usd(bs[2])}</b>`, chart: () => bandBars(last14, 's', bs, usd) },
-    { no: 4, yes: cur.p >= bp[0] && cur.p > 0, kpi: usd(cur.p), sub: `普段 <b>${usd(bp[2])}</b>`, chart: () => bandBars(last14, 'p', bp, usd) },
+    { no: 3, yes: cur.p >= bp[0] && cur.p > 0, kpi: usd(cur.p), sub: `普段 <b>${usd(bp[2])}</b>`, chart: () => bandBars(last14, 'p', bp, usd) },
   ] },
-  { q: '前年の同じ週より良かったか？', note: `前年同週 ${ymd(ly.start)}〜 と比べて`, cells: [
-    { no: 2, yes: cur.s > ly.s, kpi: pct(cur.s / ly.s - 1), sub: `前年 <b>${usd(ly.s)}</b>`, chart: () => withAxis(pairLines(c13.map(w => w.s), p13.map(w => w.s), usd, wkTip(c13)), md(c13[0].start), md(cur.start)) },
-    { no: 5, yes: cur.p > ly.p, kpi: usdD(cur.p - ly.p), sub: `前年 <b>${usd(ly.p)}</b>`, chart: () => withAxis(pairLines(c13.map(w => w.p), p13.map(w => w.p), usd, wkTip(c13)), md(c13[0].start), md(cur.start)) },
+  { q: '去年の同じ時期並み以上だったか？', note: lyNote, cells: [
+    { no: 2, yes: cur.s >= ls[0], kpi: usd(cur.s), sub: `前年 <b>${usd(ls[2])}</b><br>${tally('s', ls)}`, chart: () => lyBars('s', ls, usd) },
+    { no: 4, yes: cur.p >= lp[0] && cur.p > 0, kpi: usd(cur.p), sub: `前年 <b>${usd(lp[2])}</b><br>${tally('p', lp)}`, chart: () => lyBars('p', lp, usd) },
   ] },
-  { q: '直近13週で前年を上回っているか？', note: `${ymd(c13[0].start)}〜${md(cur.end)} の13週合計`, cells: [
-    { no: 3, yes: r13s[0] > r13s[1], kpi: pct(r13s[0] / r13s[1] - 1), sub: `13週 <b>${usd(r13s[0])}</b>`, chart: () => withAxis(pairLines(span.map(k => roll(k, 's')), span.map(k => roll(k - 52, 's')), usd, i => `${ymd(W[span[i]].start)}週までの13週`), md(W[span[0]].start), md(cur.start)) },
-    { no: 6, yes: r13p[0] > r13p[1], kpi: usdD(r13p[0] - r13p[1]), sub: `13週 <b>${usd(r13p[0])}</b>`, chart: () => withAxis(pairLines(span.map(k => roll(k, 'p')), span.map(k => roll(k - 52, 'p')), usd, i => `${ymd(W[span[i]].start)}週までの13週`), md(W[span[0]].start), md(cur.start)) },
-  ] },
-  { q: '売上の中身はどう変わったか？', note: '売上 = 注文数 × 注文単価。前年同週と比べて', split: true, cells: [
-    { no: 7, cq: '注文数は増えたか？', yes: cur.o > ly.o, kpi: `${cur.o}件 <small style="font-size:12px;color:var(--ink-2)">${pct(cur.o / ly.o - 1)}</small>`, sub: `前年 <b>${cnt(ly.o)}</b>`, chart: () => withAxis(pairLines(c13.map(w => w.o), p13.map(w => w.o), cnt, wkTip(c13)), md(c13[0].start), md(cur.start)) },
-    { no: 8, cq: '注文単価は上がったか？', yes: cur.aov > ly.aov, kpi: `${usd(cur.aov)} <small style="font-size:12px;color:var(--ink-2)">${pct(cur.aov / ly.aov - 1)}</small>`, sub: `前年 <b>${usd(ly.aov)}</b>`, chart: () => withAxis(pairLines(c13.map(w => w.aov), p13.map(w => w.aov), usd, wkTip(c13)), md(c13[0].start), md(cur.start)) },
+  { q: '売上の中身は去年の同じ時期並み以上か？', note: `売上 = 注文数 × 注文単価。${lyNote}`, split: true, cells: [
+    { no: 5, cq: '注文数', yes: cur.o >= lo_[0], kpi: cnt(cur.o), sub: `前年 <b>${cnt(lo_[2])}</b><br>${tally('o', lo_)}`, chart: () => lyBars('o', lo_, cnt) },
+    { no: 6, cq: '注文単価', yes: cur.aov >= la[0], kpi: usd(cur.aov), sub: `前年 <b>${usd(la[2])}</b><br>${tally('aov', la)}`, chart: () => lyBars('aov', la, usd) },
   ] },
 ];
 
@@ -278,13 +292,14 @@ ROWS.forEach((r, ri) => {
 // Header strip: every answer at a glance, grouped by what it measures
 const all = ROWS.flatMap((r, ri) => r.cells.map(c => ({ ...c, row: ri + 1, q: c.cq || r.q })));
 const byNo = n => all.find(c => c.no === n);
-const groups = [['Sales 売上', [1, 2, 3], ''], ['Profit 利益', [4, 5, 6], ''], ['中身', [7, 8], 'g2']];
+const groups = [['Sales 売上', [1, 2], ''], ['Profit 利益', [3, 4], ''], ['中身', [5, 6], '']];
 document.getElementById('strip').innerHTML = groups.map(([label, nos, cls]) =>
   `<div class="grp ${cls}"><span class="grp-l">${label}</span><div class="grp-c">` +
   nos.map(n => { const c = byNo(n); return `<a href="#r${c.row}" class="${c.yes ? 'yes' : 'no'}" aria-label="Q${n} ${c.q} ${c.yes ? 'Yes' : 'No'}"><span class="mark" aria-hidden="true">${c.yes ? '✓' : '✕'}</span>Q${n}</a>`; }).join('') +
   `</div></div>`).join('');
 const yesCount = all.filter(c => c.yes).length;
-document.getElementById('tally').innerHTML = `${ymd(cur.start)}（日）〜 ${md(cur.end)}（土）　8問中 <b>${yesCount}</b> 問が Yes`;
+document.getElementById('reading').innerHTML = '6問すべて Yes です。ただし帯との位置を見ると、中身は一様ではありません。注文数は13週中7週で前年の帯より上にあり、「今週だけでなく、ここ数週ずっと客が多い」状態です。一方、注文単価は13週すべてが帯の中にあり、今週の $393 は前年平均の $505 を下回っています。売上が去年並み以上なのは、客数が支えているからだと読めます。';
+document.getElementById('tally').innerHTML = `${ymd(cur.start)}（日）〜 ${md(cur.end)}（土）　6問中 <b>${yesCount}</b> 問が Yes`;
 
 const tip = document.getElementById('tip');
 document.addEventListener('pointermove', e => {
