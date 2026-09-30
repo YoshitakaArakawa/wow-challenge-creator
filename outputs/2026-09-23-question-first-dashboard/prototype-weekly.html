@@ -18,6 +18,12 @@
   --prior: #8f8d84;
   --context: #d6d3c8;
   --below: #eb6834;
+  --mean: #4a4c53;
+  --ly-line: #b9b6ac;
+  --ly-band-solid: #ecebe4;
+  --warn-ink: #8a4b00;
+  --warn-bg: #fdefd6;
+  --warn-edge: #d98a00;
   --ly-band: rgba(143, 141, 132, .26);
   --ty-band: rgba(42, 120, 214, .18);
   --yes-ink: #17693a;
@@ -99,6 +105,24 @@ svg text.lbl-this { fill: var(--ink); font-weight: 600; }
   padding: 6px 9px; border-radius: 6px; font-variant-numeric: tabular-nums;
   transform: translate(-50%, calc(-100% - 10px)); white-space: nowrap;
 }
+svg text.mean-lbl { fill: var(--mean); font-size: 9px; font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+.note { font-size: 11px; line-height: 1.45; margin: 5px 0 2px; padding: 3px 7px; border-radius: 6px; display: inline-block; }
+.note.in { color: var(--ink-2); background: var(--ground); }
+.note.alert { color: var(--warn-ink); background: var(--warn-bg); font-weight: 600; }
+.grp-c a { position: relative; }
+.grp-c a.alert { box-shadow: inset 0 0 0 2px var(--warn-edge); }
+.grp-c a.alert::after {
+  content: "!"; position: absolute; top: -5px; right: -3px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--warn-edge); color: #fff; font: 700 10px/14px var(--mono); text-align: center;
+}
+.tally .warn { color: var(--warn-ink); font-weight: 600; }
+.key { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--ink-2); padding: 10px 18px 0; }
+.key span { display: inline-flex; align-items: center; gap: 5px; }
+.key i { display: inline-block; }
+.k-this { width: 14px; height: 2.5px; background: var(--this); }
+.k-ly { width: 14px; height: 1.5px; background: var(--ly-line); }
+.k-mean { width: 14px; border-top: 1.5px dashed var(--mean); }
+.k-band { width: 14px; height: 9px; background: var(--ly-band-solid); border-radius: 2px; }
 </style>
 
 <div class="page">
@@ -110,35 +134,45 @@ svg text.lbl-this { fill: var(--ink); font-weight: 600; }
       <nav class="strip" id="strip" aria-label="6つの問いの答え"></nav>
     </header>
     <div class="cols" aria-hidden="true"><div>Sales 売上</div><div>Profit 利益</div></div>
+    <div class="key" aria-hidden="true">
+      <span><i class="k-this"></i>今年</span>
+      <span><i class="k-ly"></i>前年の同じ13週</span>
+      <span><i class="k-mean"></i>比較期間の平均（判定の線）</span>
+      <span><i class="k-band"></i>比較期間の範囲（平均 ± 1標準偏差）</span>
+    </div>
     <main id="rows"></main>
   </div>
 
   <aside class="notes">
     <section>
-      <div class="eyebrow">Prototype v6 · WOW draft</div>
+      <div class="eyebrow">Prototype v7 · WOW draft</div>
       <h2>このプロトタイプについて</h2>
       <p>WOW 公式データリポジトリの <b>Sample - Superstore-2026.xlsx</b> で計算しています。対象週は <b>2026-12-20〜12/26</b> に固定しました。週の選択は Tableau 側のパラメータで実装する前提です。</p>
-      <p>問いは2種類だけです。「最近の自分たちと比べて普段並みか」と「去年の同じ時期と比べてどうか」。これを売上・利益・注文数・注文単価の4つの指標で答えます。1行目は棒グラフ、2行目以降は今年と前年を重ねた折れ線グラフです。</p>
+      <p>各問いには2段階で答えます。まず Yes / No で「比較期間の平均より良かったか」を答えます。次に、その差が比較期間の範囲に収まっているかを補足します。範囲の外に出た週は「注目」として、ヘッダーのチップにも印を付けます。</p>
     </section>
     <section>
-      <h2>帯の読み方</h2>
-      <p>1行目は棒グラフです。帯は直前13週の平均 ± 1標準偏差です。</p>
-      <p>2行目以降は折れ線グラフです。<span style="color:var(--this);font-weight:600">青い線</span>が今年の直近13週、<span style="color:var(--prior);font-weight:600">灰色の線</span>が<b>前年の同じ13週</b>です。それぞれの13週の平均 ± 1標準偏差を、同じ色の薄い帯で重ねています。2本の帯のずれが、去年と今年の「普段」の違いです。</p>
-      <p>Yes の基準は行によって変えています。1行目は異常を拾う問いなので、帯の下限（平均 − 1標準偏差）以上なら Yes です。2行目以降は「去年並み以上か」を問うので、前年13週の平均（灰色の帯の中心）以上なら Yes です。</p>
-      <p>前年の13週は、日付ではなく52週前にずらして取ります。曜日がそろい、1月のように年をまたぐ週でもそのまま計算できます。</p>
-      <p>「13週中 上・中・下」は、今年の各週が前年の帯より上・帯の中・帯より下だった週数です。今週だけの話なのか、ここ数週ずっとそうなのかを数字でも示します。</p>
+      <h2>答えの組み合わせ</h2>
+      <ul>
+        <li><b>Yes / No ＋ 範囲内</b>: 平均との差はノイズの範囲。特に注視は不要です。</li>
+        <li><b>Yes ＋ 注目</b>: 範囲を大きく上回った異常な伸び。何が効いたかを確認する価値があります。</li>
+        <li><b>No ＋ 注目</b>: 範囲を大きく下回った異常な落ち込み。すぐに原因を確認すべきアラートです。</li>
+      </ul>
+    </section>
+    <section>
+      <h2>比較期間</h2>
+      <ul>
+        <li><b>1行目（普段より良かったか）</b>: 直前13週（今週を含まない）。</li>
+        <li><b>2・3行目（去年より良かったか）</b>: 前年の同じ13週（52週前にずらした13週）。曜日がそろい、年をまたぐ週もそのまま計算できます。</li>
+        <li>範囲はどちらも、比較期間の平均 ± 1標準偏差です。</li>
+      </ul>
+    </section>
+    <section>
+      <h2>グラフの見せ方</h2>
+      <p>1枚のグラフに線・平均線・帯が重なるので、強さの順番をはっきり分けました。今年の線がいちばん強く（青・太線）、判定の線である平均は濃い灰の破線、前年の線は細い淡い灰、範囲は背景の帯です。帯には枠線を付けていません。平均の値はグラフに書き込まず、答えの下の数字で示しています。</p>
     </section>
     <section>
       <h2>この週の読み方</h2>
       <p id="reading"></p>
-    </section>
-    <section>
-      <h2>外した問い</h2>
-      <ul>
-        <li><b>前年同週との1対1比較</b>: 週の売上は上位5注文が平均72%を占めるため、1週どうしの比較は大口の有無で決まってしまいます。前年の13週の帯と比べる形に置き換えました。</li>
-        <li><b>直近13週の合計・年累計</b>: 表示期間の途中で1度大きく上回ると、その後ずっと上回って見えます。今週の状態を問う目的に合わないため削除しました。</li>
-        <li><b>顧客数</b>: 週単位では注文数と相関 0.998 で、答えが重複します。</li>
-      </ul>
     </section>
   </aside>
 </div>
@@ -155,12 +189,9 @@ const pad = v => String(v).padStart(2, '0');
 const md = t => { const d = new Date(t); return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`; };
 const ymd = t => { const d = new Date(t); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
 const usd = v => (v < 0 ? '−' : '') + '$' + (Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toFixed(1) + 'K' : Math.abs(v).toFixed(0));
-const usdD = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + '$' + (Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toFixed(1) + 'K' : Math.abs(v).toFixed(0));
-const pct = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v * 100).toFixed(1) + '%';
 const cnt = v => Math.round(v) + '件';
 const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
 const sd = a => { const m = mean(a); return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / (a.length - 1)); };
-const sum = (a, key) => a.reduce((x, w) => x + w[key], 0);
 
 const NS = 'http://www.w3.org/2000/svg';
 function el(tag, attrs, parent, text) {
@@ -177,100 +208,84 @@ function barPath(x, y0, y1, w, r) {
   if (up) return `M${x} ${y0}V${y1 + r}Q${x} ${y1} ${x + r} ${y1}H${x + w - r}Q${x + w} ${y1} ${x + w} ${y1 + r}V${y0}Z`;
   return `M${x} ${y0}V${y1 - r}Q${x} ${y1} ${x + r} ${y1}H${x + w - r}Q${x + w} ${y1} ${x + w} ${y1 - r}V${y0}Z`;
 }
-function svg(W_, H) { return el('svg', { viewBox: `0 0 ${W_} ${H}`, class: 'chart', role: 'img' }); }
-function legend(s) {
-  el('line', { x1: 2, x2: 12, y1: 5, y2: 5, stroke: 'var(--this)', 'stroke-width': 2 }, s);
-  el('text', { x: 15, y: 8.5 }, s, '今年');
-  el('line', { x1: 42, x2: 52, y1: 5, y2: 5, stroke: 'var(--prior)', 'stroke-width': 2 }, s);
-  el('text', { x: 55, y: 8.5 }, s, '前年');
+const svg = (W_, H) => el('svg', { viewBox: `0 0 ${W_} ${H}`, class: 'chart', role: 'img' });
+
+// Comparison stats: mean is the Yes/No line, mean ± 1 SD is the expected range
+const stats = ws => key => { const a = ws.map(w => w[key]); const m = mean(a), s = sd(a); return { m, lo: m - s, hi: m + s }; };
+const pos = (v, b) => v > b.hi ? 'above' : v < b.lo ? 'below' : 'in';
+
+function meanLine(s, y, m, fmt, W_, label) {
+  el('line', { x1: 0, x2: W_, y1: y(m), y2: y(m), stroke: 'var(--mean)', 'stroke-width': 1.25, 'stroke-dasharray': '4 3' }, s);
+
 }
 
-// Last 14 weekly bars with the normal band from the prior 13
-function bandBars(weeks, key, band, fmt, W_ = 180, H = 84) {
-  const s = svg(W_, H), vals = weeks.map(w => w[key]);
-  const lo = Math.min(0, ...vals, band[0]), hi = Math.max(...vals, band[1]) * 1.12;
-  const top = 14, bot = H - 16, y = lin(lo, hi, bot, top), zero = y(0);
-  el('rect', { x: 0, y: y(band[1]), width: W_, height: Math.max(0, y(band[0]) - y(band[1])), fill: 'var(--band)' }, s);
+// Row 1: this year's last 14 weeks as bars over the prior-13-week range
+function recentBars(key, b, fmt, W_ = 180, H = 100) {
+  const s = svg(W_, H), ws = W.slice(K - 13, K + 1), vals = ws.map(w => w[key]);
+  const lo = Math.min(0, ...vals, b.lo), hi = Math.max(...vals, b.hi) * 1.12;
+  const top = 12, bot = H - 16, y = lin(lo, hi, bot, top), zero = y(0);
+  el('rect', { x: 0, y: y(b.hi), width: W_, height: Math.max(0, y(b.lo) - y(b.hi)), fill: 'var(--ly-band-solid)' }, s);
   el('line', { x1: 0, x2: W_, y1: zero, y2: zero, stroke: 'var(--rule)' }, s);
-  const slot = W_ / weeks.length, bw = slot - 3;
-  weeks.forEach((w, i) => {
-    el('path', { d: barPath(i * slot + 1.5, zero, y(w[key]), bw, 3), fill: i === weeks.length - 1 ? 'var(--this)' : 'var(--context)' }, s);
+  const slot = W_ / ws.length, bw = slot - 3;
+  ws.forEach((w, i) => {
+    const last = i === ws.length - 1;
+    el('path', { d: barPath(i * slot + 1.5, zero, y(w[key]), bw, 3), fill: last ? 'var(--this)' : 'var(--context)', 'fill-opacity': last ? 1 : .8 }, s);
     el('rect', { x: i * slot, y: top - 10, width: slot, height: bot - top + 10, class: 'hit', 'data-tip': `${ymd(w.start)}週　${fmt(w[key])}` }, s);
   });
-  el('text', { x: W_, y: Math.max(y(vals[vals.length - 1]) - 4, 9), 'text-anchor': 'end', class: 'lbl-this' }, s, fmt(vals[vals.length - 1]));
-  el('text', { x: 0, y: H - 3 }, s, md(weeks[0].start));
-  el('text', { x: W_, y: H - 3, 'text-anchor': 'end' }, s, md(weeks[weeks.length - 1].start));
+  meanLine(s, y, b.m, fmt, W_, '平均');
+  el('text', { x: 0, y: H - 3 }, s, md(ws[0].start));
+  el('text', { x: W_, y: H - 3, 'text-anchor': 'end' }, s, md(ws[ws.length - 1].start));
   return s;
 }
 
-// This year vs last year as two lines over the same run of weeks
-function pairLines(cur, prev, fmt, tipLabel, W_ = 180, H = 84) {
-  const s = svg(W_, H), all = cur.concat(prev);
-  const lo = Math.min(0, ...all), hi = Math.max(...all) * 1.12;
-  const top = 14, bot = H - 16, R = W_ - 6, x = lin(0, cur.length - 1, 4, R), y = lin(lo, hi, bot, top);
-  el('line', { x1: 0, x2: W_, y1: y(0), y2: y(0), stroke: 'var(--rule)' }, s);
-  [[prev, 'var(--prior)'], [cur, 'var(--this)']].forEach(([vs, c]) => {
-    el('path', { d: path(vs.map((v, i) => [x(i), y(v)])), fill: 'none', stroke: c, 'stroke-width': 1.75, 'stroke-linejoin': 'round' }, s);
-    const i = vs.length - 1;
-    el('circle', { cx: x(i), cy: y(vs[i]), r: 3.5, fill: c, stroke: '#fff', 'stroke-width': 1.5 }, s);
-  });
-  const step = (R - 4) / (cur.length - 1);
-  cur.forEach((v, i) => el('rect', { x: x(i) - step / 2, y: top - 10, width: step, height: bot - top + 10, class: 'hit', 'data-tip': `${tipLabel(i)}　今年 ${fmt(v)}　前年 ${fmt(prev[i])}` }, s));
-  legend(s);
-  return s;
-}
-
-const cur = W[K], ly = W[K - 52];
-const hist = W.slice(K - 13, K), last14 = W.slice(K - 13, K + 1);
-const band = key => { const a = hist.map(w => w[key]); const m = mean(a), s = sd(a); return [m - s, m + s, m]; };
-const lyW = W.slice(K - 64, K - 51);   // last year's same 13 weeks
-const tyW = W.slice(K - 12, K + 1);    // this year's latest 13 weeks
-const lyBand = key => { const a = lyW.map(w => w[key]); const m = mean(a), s = sd(a); return [m - s, m + s, m]; };
-
-// This year's and last year's 13 weeks as two lines, each with its own mean ± 1 SD band
-function lyLines(key, band, fmt, W_ = 180, H = 112) {
+// Rows 2–3: this year's 13 weeks vs last year's same 13 weeks, with last year's mean and range
+const tyW = W.slice(K - 12, K + 1), lyW = W.slice(K - 64, K - 51);
+function yoyLines(key, b, fmt, W_ = 180, H = 112) {
   const s = svg(W_, H), ty = tyW.map(w => w[key]), ly = lyW.map(w => w[key]);
-  const a = ty; const tm = mean(a), ts = sd(a), tb = [tm - ts, tm + ts];
-  const lo = Math.min(0, ...ty, ...ly, band[0], tb[0]), hi = Math.max(...ty, ...ly, band[1], tb[1]) * 1.1;
-  const top = 16, bot = H - 16, R = W_ - 6, x = lin(0, 12, 4, R), y = lin(lo, hi, bot, top);
-  const bandRect = (b, fill) => el('rect', { x: 4, y: y(b[1]), width: R - 4, height: Math.max(0, y(b[0]) - y(b[1])), fill }, s);
-  bandRect(band, 'var(--ly-band)');
-  bandRect(tb, 'var(--ty-band)');
+  const lo = Math.min(0, ...ty, ...ly, b.lo), hi = Math.max(...ty, ...ly, b.hi) * 1.1;
+  const top = 12, bot = H - 16, R = W_ - 6, x = lin(0, 12, 4, R), y = lin(lo, hi, bot, top);
+  el('rect', { x: 0, y: y(b.hi), width: W_, height: Math.max(0, y(b.lo) - y(b.hi)), fill: 'var(--ly-band-solid)' }, s);
   el('line', { x1: 0, x2: W_, y1: y(0), y2: y(0), stroke: 'var(--rule)' }, s);
-  [[ly, 'var(--prior)'], [ty, 'var(--this)']].forEach(([vs, c]) => {
-    el('path', { d: path(vs.map((v, i) => [x(i), y(v)])), fill: 'none', stroke: c, 'stroke-width': 1.75, 'stroke-linejoin': 'round' }, s);
-  });
-  el('circle', { cx: x(12), cy: y(ly[12]), r: 3, fill: 'var(--prior)', stroke: '#fff', 'stroke-width': 1.5 }, s);
-  el('circle', { cx: x(12), cy: y(ty[12]), r: 4, fill: 'var(--this)', stroke: '#fff', 'stroke-width': 1.5 }, s);
+  el('path', { d: path(ly.map((v, i) => [x(i), y(v)])), fill: 'none', stroke: 'var(--ly-line)', 'stroke-width': 1.25, 'stroke-linejoin': 'round' }, s);
+  meanLine(s, y, b.m, fmt, W_, '前年平均');
+  el('path', { d: path(ty.map((v, i) => [x(i), y(v)])), fill: 'none', stroke: 'var(--this)', 'stroke-width': 2.25, 'stroke-linejoin': 'round' }, s);
+  el('circle', { cx: x(12), cy: y(ty[12]), r: 4.5, fill: 'var(--this)', stroke: '#fff', 'stroke-width': 2 }, s);
   const step = (R - 4) / 12;
   tyW.forEach((w, i) => el('rect', { x: x(i) - step / 2, y: top - 10, width: step, height: bot - top + 10, class: 'hit', 'data-tip': `${ymd(w.start)}週　今年 ${fmt(ty[i])}　前年 ${fmt(ly[i])}` }, s));
-  legend(s);
   el('text', { x: 0, y: H - 3 }, s, md(tyW[0].start));
-  el('text', { x: W_, y: H - 3, 'text-anchor': 'end' }, s, md(cur.start));
+  el('text', { x: W_, y: H - 3, 'text-anchor': 'end' }, s, md(K && W[K].start));
   return s;
 }
-const tally = (key, band) => {
-  const up = tyW.filter(w => w[key] > band[1]).length, dn = tyW.filter(w => w[key] < band[0]).length;
-  return `13週中 上 <b>${up}</b>・中 <b>${13 - up - dn}</b>・下 <b>${dn}</b>`;
-};
 
-const bs = band('s'), bp = band('p');
-const ls = lyBand('s'), lp = lyBand('p'), lo_ = lyBand('o'), la = lyBand('aov');
-const lyNote = `前年 ${ymd(lyW[0].start)}〜${md(lyW[12].end)} の13週と比べて`;
+const cur = W[K];
+const recent = stats(W.slice(K - 13, K)), lastYear = stats(lyW);
+
+function judge(key, b, scope) {
+  const v = cur[key], p = pos(v, b), yes = v >= b.m;
+  const side = yes ? '平均より上' : '平均より下';
+  const note = p === 'in'
+    ? `<span class="note in">${side}だが、${scope}の範囲内。注視は不要</span>`
+    : `<span class="note alert">⚠ 注目：${scope}の範囲を大きく${p === 'above' ? '上回った' : '下回った'}</span>`;
+  return { yes, alert: p !== 'in', pos: p, note };
+}
+function upDown(key, b) {
+  const up = tyW.filter(w => w[key] > b.hi).length, dn = tyW.filter(w => w[key] < b.lo).length;
+  return `直近13週: 範囲より上 <b>${up}</b>・下 <b>${dn}</b>`;
+}
+
+const specs = [
+  { row: 0, no: 1, key: 's', b: recent('s'), fmt: usd, scope: '普段', chart: recentBars },
+  { row: 0, no: 3, key: 'p', b: recent('p'), fmt: usd, scope: '普段', chart: recentBars },
+  { row: 1, no: 2, key: 's', b: lastYear('s'), fmt: usd, scope: '前年', chart: yoyLines },
+  { row: 1, no: 4, key: 'p', b: lastYear('p'), fmt: usd, scope: '前年', chart: yoyLines },
+  { row: 2, no: 5, key: 'o', b: lastYear('o'), fmt: cnt, scope: '前年', chart: yoyLines, cq: '注文数' },
+  { row: 2, no: 6, key: 'aov', b: lastYear('aov'), fmt: usd, scope: '前年', chart: yoyLines, cq: '注文単価' },
+].map(c => ({ ...c, ...judge(c.key, c.b, c.scope) }));
 
 const ROWS = [
-  { q: '今週は普段並み以上だったか？', note: '直前13週と比べて', cells: [
-    { no: 1, yes: cur.s >= bs[0], kpi: usd(cur.s), sub: `普段 <b>${usd(bs[2])}</b>`, chart: () => bandBars(last14, 's', bs, usd) },
-    { no: 3, yes: cur.p >= bp[0] && cur.p > 0, kpi: usd(cur.p), sub: `普段 <b>${usd(bp[2])}</b>`, chart: () => bandBars(last14, 'p', bp, usd) },
-  ] },
-  { q: '去年の同じ時期並み以上だったか？', note: lyNote, cells: [
-    { no: 2, yes: cur.s >= ls[2], kpi: usd(cur.s), sub: `前年 <b>${usd(ls[2])}</b><br>${tally('s', ls)}`, chart: () => lyLines('s', ls, usd) },
-    { no: 4, yes: cur.p >= lp[2], kpi: usd(cur.p), sub: `前年 <b>${usd(lp[2])}</b><br>${tally('p', lp)}`, chart: () => lyLines('p', lp, usd) },
-  ] },
-  { q: '売上の中身は去年の同じ時期並み以上か？', note: `売上 = 注文数 × 注文単価。${lyNote}`, split: true, cells: [
-    { no: 5, cq: '注文数', yes: cur.o >= lo_[2], kpi: cnt(cur.o), sub: `前年 <b>${cnt(lo_[2])}</b><br>${tally('o', lo_)}`, chart: () => lyLines('o', lo_, cnt) },
-    { no: 6, cq: '注文単価', yes: cur.aov >= la[2], kpi: usd(cur.aov), sub: `前年 <b>${usd(la[2])}</b><br>${tally('aov', la)}`, chart: () => lyLines('aov', la, usd) },
-  ] },
+  { q: '今週は普段より良かったか？', note: '直前13週の平均と比べて' },
+  { q: '去年の同じ時期より良かったか？', note: `前年 ${ymd(lyW[0].start)}〜${md(lyW[12].end)} の13週の平均と比べて` },
+  { q: '売上の中身は去年の同じ時期より良かったか？', note: '売上 = 注文数 × 注文単価。前年の同じ13週の平均と比べて' },
 ];
 
 const chip = yes => `<span class="chip ${yes ? 'yes' : 'no'}"><span aria-hidden="true">${yes ? '✓' : '✕'}</span>${yes ? 'Yes' : 'No'}</span>`;
@@ -282,29 +297,36 @@ ROWS.forEach((r, ri) => {
   row.innerHTML = `<p class="row-q">${r.q}<small>${r.note}</small></p>`;
   const pair = document.createElement('div');
   pair.className = 'pair';
-  r.cells.forEach(c => {
+  specs.filter(c => c.row === ri).forEach(c => {
     const d = document.createElement('div');
     d.className = 'cell';
     d.innerHTML = (c.cq ? `<div class="cell-q">${c.cq}</div>` : '') +
-      `<div class="cell-top"><span class="qn">Q${c.no}</span>${chip(c.yes)}</div><div class="kpi">${c.kpi}</div><div class="sub">${c.sub}</div>`;
-    d.appendChild(c.chart());
+      `<div class="cell-top"><span class="qn">Q${c.no}</span>${chip(c.yes)}</div>` +
+      `<div class="kpi">${c.fmt(cur[c.key])}</div>` +
+      `<div class="sub">${c.scope === '普段' ? '普段の平均' : '前年平均'} <b>${c.fmt(c.b.m)}</b>` + (c.row > 0 ? `<br>${upDown(c.key, c.b)}` : '') + `</div>` +
+      c.note;
+    d.appendChild(c.chart(c.key, c.b, c.fmt));
     pair.appendChild(d);
   });
   row.appendChild(pair);
   host.appendChild(row);
 });
 
-// Header strip: every answer at a glance, grouped by what it measures
-const all = ROWS.flatMap((r, ri) => r.cells.map(c => ({ ...c, row: ri + 1, q: c.cq || r.q })));
-const byNo = n => all.find(c => c.no === n);
-const groups = [['Sales 売上', [1, 2], ''], ['Profit 利益', [3, 4], ''], ['中身', [5, 6], '']];
-document.getElementById('strip').innerHTML = groups.map(([label, nos, cls]) =>
-  `<div class="grp ${cls}"><span class="grp-l">${label}</span><div class="grp-c">` +
-  nos.map(n => { const c = byNo(n); return `<a href="#r${c.row}" class="${c.yes ? 'yes' : 'no'}" aria-label="Q${n} ${c.q} ${c.yes ? 'Yes' : 'No'}"><span class="mark" aria-hidden="true">${c.yes ? '✓' : '✕'}</span>Q${n}</a>`; }).join('') +
+// Header strip: every answer at a glance; out-of-range answers carry an alert mark
+const groups = [['Sales 売上', [1, 2]], ['Profit 利益', [3, 4]], ['中身', [5, 6]]];
+const byNo = n => specs.find(c => c.no === n);
+document.getElementById('strip').innerHTML = groups.map(([label, nos]) =>
+  `<div class="grp"><span class="grp-l">${label}</span><div class="grp-c">` +
+  nos.map(n => { const c = byNo(n); return `<a href="#r${c.row + 1}" class="${c.yes ? 'yes' : 'no'}${c.alert ? ' alert' : ''}" aria-label="Q${n} ${c.yes ? 'Yes' : 'No'}${c.alert ? '、注目' : ''}"><span class="mark" aria-hidden="true">${c.yes ? '✓' : '✕'}</span>Q${n}</a>`; }).join('') +
   `</div></div>`).join('');
-const yesCount = all.filter(c => c.yes).length;
-document.getElementById('reading').innerHTML = '6問中5問が Yes で、No は注文単価（Q6）だけです。注文数は13週中7週で前年の帯より上にあり、「今週だけでなく、ここ数週ずっと客が多い」状態です。一方、注文単価は今週 $393 で、前年平均の $505 を下回っています。ただし13週すべてが帯の中なので、単価の下落は「異常」ではなく「やや低め」の範囲です。売上が去年並み以上なのは、客数が支えているからだと読めます。';
-document.getElementById('tally').innerHTML = `${ymd(cur.start)}（日）〜 ${md(cur.end)}（土）　6問中 <b>${yesCount}</b> 問が Yes`;
+const yesCount = specs.filter(c => c.yes).length, alerts = specs.filter(c => c.alert);
+document.getElementById('tally').innerHTML = `${ymd(cur.start)}（日）〜 ${md(cur.end)}（土）　6問中 <b>${yesCount}</b> 問が Yes` +
+  (alerts.length ? `・<span class="warn">注目 ${alerts.length}件</span>` : '・注目なし');
+
+const name = { 1: '売上（普段比）', 3: '利益（普段比）', 2: '売上（前年比）', 4: '利益（前年比）', 5: '注文数', 6: '注文単価' };
+document.getElementById('reading').innerHTML =
+  `注目は ${alerts.map(c => `Q${c.no} ${name[c.no]}（${c.pos === 'above' ? '上振れ' : '下振れ'}）`).join('、') || 'ありません'}。` +
+  `それ以外の問いは、Yes でも No でも比較期間の範囲内で、平均との差はノイズの範囲です。Q1 の売上は普段の平均を少し下回って No ですが、注視は不要です。`;
 
 const tip = document.getElementById('tip');
 document.addEventListener('pointermove', e => {
