@@ -6,6 +6,7 @@ import {
   writeTwb,
   findPrimaryDatasourceName,
   insertCalculatedFields,
+  insertFolders,
   insertParameters,
   insertWorksheets,
   insertDashboards,
@@ -88,6 +89,13 @@ async function main() {
     const result = insertCalculatedFields(xml, patch.calculatedFields, primary.name);
     xml = result.xml;
     calcIdMap = result.idMap;
+
+    const folders: Record<string, string[]> = {};
+    for (const f of patch.calculatedFields) {
+      if (!f.folder) continue;
+      (folders[f.folder] ??= []).push(calcIdMap[f.caption]);
+    }
+    xml = insertFolders(xml, primary.name, folders);
   }
 
   if (patch.parameters?.length) {

@@ -45,3 +45,6 @@ Thumbs.db
 
 # Playwright MCP session artifacts (screenshots, snapshots, console logs)
 .playwright-mcp/
+
+# Tableau Desktop auto-recovery files
+*.twbr

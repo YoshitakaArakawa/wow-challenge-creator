@@ -33,6 +33,8 @@ export interface CalculatedFieldSpec {
   type?: "quantitative" | "ordinal" | "nominal";
   formula: string;
   defaultFormat?: string;
+  /** Data pane folder name (e.g. "2_Stats"). Omitted = no folder. */
+  folder?: string;
 }
 
 export interface WorksheetSpec {

@@ -63,7 +63,9 @@ async function main() {
 
   // 4. Parse → tree (round-trip sanity)
   try {
-    const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@_" });
+    // TWB carries thousands of &apos;/&quot; entities; expanding them trips the parser's
+    // default 1000-entity guard, and this round-trip check does not need expanded text.
+    const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@_", processEntities: false });
     parser.parse(xml);
   } catch (err) {
     issues.push({ level: "error", message: `Parser failed: ${(err as Error).message}` });

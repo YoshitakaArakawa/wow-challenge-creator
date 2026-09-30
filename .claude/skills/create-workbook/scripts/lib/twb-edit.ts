@@ -106,11 +106,64 @@ export function insertCalculatedFields(
       `      <calculation class='tableau' formula='${escapeXml(field.formula)}'/>\n` +
       `    </column>`;
 
-    const anchor = new RegExp(`<datasource\\b[^>]*\\bname=['"]${dsName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}['"][^>]*>`);
-    mutated = insertBeforeClosingTag(mutated, "datasource", columnXml, anchor);
+    mutated = insertIntoDatasource(mutated, dsName, columnXml);
   }
 
   return { xml: mutated, idMap };
+}
+
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function datasourceBody(xml: string, dsName: string): { start: number; end: number } {
+  const open = new RegExp(`<datasource\\b[^>]*\\bname=['"]${escapeRe(dsName)}['"][^>]*>`).exec(xml);
+  if (!open) throw new Error(`Datasource not found: ${dsName}`);
+  const start = open.index + open[0].length;
+  return { start, end: xml.indexOf("</datasource>", start) };
+}
+
+/**
+ * Insert content into the named datasource just before `<folders-common>` / `<layout>` when present
+ * (the element order Tableau Desktop writes), otherwise before `</datasource>`.
+ */
+function insertIntoDatasource(xml: string, dsName: string, content: string): string {
+  const { start, end } = datasourceBody(xml, dsName);
+  const m = /\n\s*<(folders-common|layout )/.exec(xml.slice(start, end));
+  const at = m ? start + m.index : end;
+  return xml.slice(0, at) + content + xml.slice(at);
+}
+
+/**
+ * Put fields into Data pane folders via `<folders-common>`. Appends to an existing folder of the
+ * same name (e.g. the template's `0_raw`); otherwise adds the folder, creating the container
+ * before `<layout>` when the datasource has none.
+ */
+export function insertFolders(xml: string, dsName: string, folders: Record<string, string[]>): string {
+  const names = Object.keys(folders).sort();
+  if (names.length === 0) return xml;
+  const { start, end } = datasourceBody(xml, dsName);
+  let body = xml.slice(start, end);
+  const items = (fields: string[]) =>
+    fields.map((f) => `\n          <folder-item name='${escapeXml(f)}' type='field' />`).join("");
+
+  if (!body.includes("<folders-common>")) {
+    const lay = /\n\s*<layout /.exec(body);
+    const at = lay ? lay.index : body.length;
+    body = body.slice(0, at) + "\n      <folders-common>\n      </folders-common>" + body.slice(at);
+  }
+  for (const name of names) {
+    const existing = new RegExp(`(<folder name='${escapeRe(escapeXml(name))}'>)`);
+    if (existing.test(body)) {
+      body = body.replace(existing, (tag) => tag + items(folders[name]));
+    } else {
+      body = body.replace(
+        "</folders-common>",
+        `  <folder name='${escapeXml(name)}'>${items(folders[name])}\n        </folder>\n      </folders-common>`,
+      );
+    }
+  }
+  return xml.slice(0, start) + body + xml.slice(end);
 }
 
 /**
