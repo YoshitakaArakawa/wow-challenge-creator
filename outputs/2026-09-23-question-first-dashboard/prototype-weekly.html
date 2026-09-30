@@ -1,0 +1,361 @@
+<title>Superstore 週次チェック</title>
+<meta name="color-scheme" content="light only">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
+<style>
+:root {
+  color-scheme: light only;
+  --ground: #f6f5f0;
+  --phone: #ffffff;
+  --ink: #1d1f24;
+  --ink-2: #555862;
+  --ink-3: #8a8c93;
+  --rule: #e6e3da;
+  --grid: #eeece5;
+  --band: #eeebe2;
+  --this: #2a78d6;
+  --prior: #8f8d84;
+  --context: #d6d3c8;
+  --below: #eb6834;
+  --mean: #4a4c53;
+  --ly-line: #b9b6ac;
+  --ly-band-solid: #ecebe4;
+  --warn-ink: #8a4b00;
+  --warn-bg: #fdefd6;
+  --warn-edge: #d98a00;
+  --hl: #e8f1fc;
+  --ly-band: rgba(143, 141, 132, .26);
+  --ty-band: rgba(42, 120, 214, .18);
+  --yes-ink: #17693a;
+  --yes-bg: #e2f1e7;
+  --no-ink: #a3281f;
+  --no-bg: #f9e3df;
+  --sans: "IBM Plex Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+html, body { background: #f6f5f0 !important; color: #1d1f24; }
+.page {
+  background: #f6f5f0 !important;
+  min-height: 100vh;
+  font-family: var(--sans);
+  color: var(--ink);
+  padding: 32px 16px 48px;
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 40px;
+}
+.phone {
+  width: 100%; max-width: 420px;
+  background: var(--phone);
+  border: 1px solid var(--rule); border-radius: 28px;
+  box-shadow: 0 18px 40px -24px rgba(40, 38, 30, .35);
+  overflow: hidden;
+}
+.phone-head { padding: 22px 18px 14px; border-bottom: 1px solid var(--rule); }
+.eyebrow { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+.phone-head h1 { font-size: 20px; line-height: 1.35; margin: 4px 0 10px; font-weight: 700; text-wrap: balance; }
+.strip { display: flex; gap: 10px; margin-top: 12px; }
+.grp { display: flex; flex-direction: column; gap: 4px; flex: 3; min-width: 0; }
+.grp.g2 { flex: 2; }
+.grp-l { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.grp-c { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; }
+.grp-c a { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0 5px; border-radius: 8px; text-decoration: none; font: 600 10.5px var(--mono); }
+.grp-c a:focus-visible { outline: 2px solid var(--this); outline-offset: 1px; }
+.grp-c .mark { font-size: 14px; line-height: 1; }
+.row { scroll-margin-top: 36px; }
+.cell-q { font-size: 12px; color: var(--ink); font-weight: 500; margin-bottom: 4px; }
+.tally { font-size: 12.5px; color: var(--ink-2); margin-top: 10px; }
+.tally b { font-family: var(--mono); color: var(--ink); }
+
+.cols { display: grid; grid-template-columns: 1fr 1fr; padding: 8px 18px 0; gap: 12px; position: sticky; top: env(safe-area-inset-top, 0px); background: var(--phone); z-index: 2; }
+.cols div { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+
+.row { padding: 14px 18px 16px; border-bottom: 1px solid var(--rule); }
+.row:last-child { border-bottom: 0; }
+.row-q { font-size: 13.5px; color: var(--ink); font-weight: 500; margin: 0 0 10px; }
+.row-q small { display: block; font-size: 11.5px; color: var(--ink-3); font-weight: 400; margin-top: 1px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cell { min-width: 0; }
+.cell-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.qn { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); font-weight: 600; }
+.chip { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 12.5px; padding: 2px 8px 2px 7px; border-radius: 999px; }
+.yes { background: var(--yes-bg); color: var(--yes-ink); }
+.no { background: var(--no-bg); color: var(--no-ink); }
+.kpi { font-family: var(--mono); font-size: 19px; font-weight: 600; letter-spacing: -.01em; margin-top: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sub { font-size: 11.5px; color: var(--ink-2); margin: 1px 0 6px; font-variant-numeric: tabular-nums; }
+.sub b { font-family: var(--mono); font-weight: 600; color: var(--ink); }
+.wide .cell-top { gap: 8px; }
+.wide .kpi { display: inline-block; margin-right: 8px; }
+.wide .sub { display: inline; }
+svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+svg text { font-family: var(--mono); font-size: 9.5px; fill: var(--ink-3); }
+svg text.lbl-this { fill: var(--ink); font-weight: 600; }
+.hit { fill: transparent; }
+
+.notes { width: 100%; max-width: 460px; font-size: 14px; line-height: 1.75; color: var(--ink-2); }
+.notes h2 { font-size: 16px; color: var(--ink); margin: 0 0 8px; font-weight: 700; }
+.notes section { padding-bottom: 22px; margin-bottom: 22px; border-bottom: 1px solid var(--rule); }
+.notes section:last-child { border-bottom: 0; }
+.notes p { margin: 0 0 10px; }
+.notes ul { padding-left: 1.2em; margin: 0; }
+.notes li { margin-bottom: 6px; }
+.notes b { color: var(--ink); font-weight: 600; }
+
+#tip {
+  position: fixed; pointer-events: none; z-index: 10;
+  background: #1d1f24; color: #fff; font-size: 12px; line-height: 1.5;
+  padding: 6px 9px; border-radius: 6px; font-variant-numeric: tabular-nums;
+  transform: translate(-50%, calc(-100% - 10px)); white-space: nowrap;
+}
+svg text.mean-lbl { fill: var(--mean); font-size: 9px; font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+svg text.cur-lbl { fill: var(--this); font-size: 11px; font-weight: 700; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+svg text.cur-axis { fill: var(--this); font-weight: 600; }
+.headline { margin: 10px 0 0; font-size: 13.5px; line-height: 1.55; font-weight: 600; color: var(--ink); background: var(--ground); border-radius: 10px; padding: 9px 11px; }
+.note { font-size: 11px; line-height: 1.45; margin: 5px 0 2px; padding: 3px 7px; border-radius: 6px; display: inline-block; }
+.note.in { color: var(--ink-2); background: var(--ground); }
+.note.alert { color: var(--warn-ink); background: var(--warn-bg); font-weight: 600; }
+.grp-c a { position: relative; }
+.grp-c a.alert { box-shadow: inset 0 0 0 2px var(--warn-edge); }
+.grp-c a.alert::after {
+  content: "!"; position: absolute; top: -5px; right: -3px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--warn-edge); color: #fff; font: 700 10px/14px var(--mono); text-align: center;
+}
+.tally .warn { color: var(--warn-ink); font-weight: 600; }
+.key { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--ink-2); padding: 10px 18px 0; }
+.key span { display: inline-flex; align-items: center; gap: 5px; }
+.key i { display: inline-block; }
+.k-this { width: 14px; height: 2.5px; background: var(--this); }
+.k-ly { width: 14px; height: 1.5px; background: var(--ly-line); }
+.k-mean { width: 14px; border-top: 1.5px dashed var(--mean); }
+.k-band { width: 14px; height: 9px; background: var(--ly-band-solid); border-radius: 2px; }
+</style>
+
+<div class="page">
+  <div class="phone">
+    <header class="phone-head">
+      <div class="eyebrow">Superstore · Weekly check-in</div>
+      <h1>今週、私たちはうまくいっている？</h1>
+      <div class="tally" id="tally"></div>
+      <p class="headline" id="headline"></p>
+      <nav class="strip" id="strip" aria-label="4つの問いの答え"></nav>
+    </header>
+    <div class="cols" aria-hidden="true"><div>Sales 売上</div><div>Profit 利益</div></div>
+    <div class="key" aria-hidden="true">
+      <span><i class="k-this"></i>今年</span>
+      <span><i class="k-ly"></i>前年の同じ13週</span>
+      <span><i class="k-mean"></i>比較期間の平均（判定の線）</span>
+      <span><i class="k-band"></i>比較期間の範囲（平均 ± 1標準偏差）</span>
+    </div>
+    <main id="rows"></main>
+  </div>
+
+  <aside class="notes">
+    <section>
+      <div class="eyebrow">Prototype v9 · WOW draft</div>
+      <h2>このプロトタイプについて</h2>
+      <p>WOW 公式データリポジトリの <b>Sample - Superstore-2026.xlsx</b> で計算しています。対象週は <b>2026-12-20〜12/26</b> に固定しました。週の選択は Tableau 側のパラメータで実装する前提です。</p>
+      <p>ヘッダーの一言は、4つの判定結果だけから組み立てた文です。範囲の外に出た問いだけを文にして、残りは「ほかは範囲内です」とまとめます。プッシュ通知で届く文面のひな形のつもりです。</p>
+    </section>
+    <section>
+      <h2>答え方</h2>
+      <ul>
+        <li><b>Yes / No</b>: 比較期間の平均以上なら Yes、未満なら No。</li>
+        <li><b>補足</b>: 平均との差を事実で書きます。売上は %、利益は差額（$）です。範囲（平均 ± 1標準偏差）の中なら「範囲内」と添えます。</li>
+        <li><b>注目</b>: 範囲の外に出たとき。上限・下限からどれだけはみ出したかを書き、ヘッダーのチップにも印を付けます。</li>
+      </ul>
+    </section>
+    <section>
+      <h2>比較期間（今週は含めない）</h2>
+      <ul>
+        <li><b>1行目（普段より良かったか）</b>: 今週の直前13週。平均も標準偏差も、今週を含めずに計算します。グラフでも比較の13週と今週を離して描き、帯と平均線は比較の13週の上だけに引いています。</li>
+        <li><b>2行目（去年より良かったか）</b>: 前年の同じ13週（52週前にずらした13週）。今年の値はいっさい含みません。</li>
+        <li>標準偏差は標本標準偏差（Tableau の <b>STDEV</b>）。</li>
+      </ul>
+    </section>
+    <section>
+      <h2>今週の見せ方</h2>
+      <p>どのグラフでも、今週だけを淡い青の縦帯で囲み、青の太い印と値のラベルで示しています。比較期間の要素（灰の棒・前年の線・平均の破線・範囲の帯）は、すべて灰の系統にそろえて後ろに下げました。</p>
+    </section>
+    <section>
+      <h2>この週の読み方</h2>
+      <p id="reading"></p>
+    </section>
+  </aside>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+const WK = {"start":"2023-01-01","S":[4818.3,3721.07,3873.65,1573.87,1443.21,2568.79,828.69,190.92,4141.34,3926.89,36261.23,6634.26,6109.54,12093.56,4760.66,3618.64,6653.86,2330.36,9996.98,2920.96,9199.63,9589.04,10567.49,5352.73,8239.81,4442.02,3813.81,5066.06,6329.98,16767.68,8112.32,10709.64,4042.75,4305.25,6839.8,22214.64,13368.83,30115.06,13248.31,3871.36,10623.5,7377.68,2364.96,24512.2,15212.16,20177.37,22042.39,12569.66,8778.63,20948.6,14213.45,15303.37,9544.86,2859.07,658.81,4093.91,7051.38,3748.54,2842.77,3130.86,4278.15,7373.36,10724.59,11644.56,7493.67,5098.6,6396.73,10473.93,6802.64,9562.32,4798.07,4911.14,7758.66,9674.99,3868.39,6259.27,8729.81,5105.63,5095.63,7679.3,7706.0,4128.44,6458.14,8264.37,5041.17,11291.2,10158.09,10176.17,10890.19,27359.23,16201.45,4059.57,8006.5,7009.86,6649.4,14316.46,23537.56,16085.37,15466.18,12248.8,23102.68,10782.89,18839.44,18168.5,8210.01,3265.88,2256.72,4988.22,4910.52,15319.37,2949.61,4052.09,6781.58,10765.4,24241.96,5433.48,5652.33,6726.21,9780.05,17438.51,4907.62,3343.9,11216.1,3257.08,19532.29,20322.35,9283.15,12115.32,5701.4,12292.45,6540.99,9102.22,10053.52,9351.13,8404.69,3822.14,7643.8,10366.39,8253.29,26019.84,17593.41,15567.61,12431.97,28760.68,3365.16,10010.1,11709.41,8371.84,17536.13,22927.6,9341.07,28183.65,28536.36,19537.95,24368.48,23246.41,8414.88,4596.8,14901.14,10690.73,8438.89,5035.72,3300.81,7102.37,4862.23,5863.9,11217.71,10596.56,27331.49,13355.77,11189.69,7034.14,7041.39,8384.35,13436.97,9310.58,11751.18,6149.28,8947.98,10096.39,14928.05,9839.68,17016.39,8941.65,10854.82,10622.36,9883.89,6560.18,11258.65,27364.76,13697.69,21062.59,18953.94,20657.29,27509.44,13945.08,18935.13,18793.38,27753.77,7091.53,33478.04,21344.5,33100.8,23393.99,28072.91,22963.08,13980.67,21641.03,5654.51],"P":[1230.54,657.01,456.21,180.57,311.24,434.89,82.4,45.44,-759.27,678.59,-1000.25,1322.94,480.93,1816.78,399.14,203.18,767.16,576.11,173.51,-25.51,2236.47,2403.54,561.19,1187.36,866.29,569.03,468.63,660.67,507.96,-2813.97,1835.27,2595.33,451.03,966.24,1179.44,-1860.58,2703.31,5154.96,1593.74,227.73,1937.66,779.34,193.99,3615.55,349.65,2532.79,3087.29,1051.3,1083.98,2961.56,2389.48,731.94,109.58,-19.11,-319.76,4.55,-1363.14,485.64,656.57,1434.44,311.47,973.61,4304.91,3177.92,1186.67,160.48,-546.05,1662.0,1222.87,2240.05,1096.13,512.74,836.15,2036.56,342.89,433.81,1845.68,412.7,710.49,1126.43,327.96,377.94,536.15,1607.36,216.16,1705.44,2052.33,1418.08,2320.29,734.57,3747.09,482.95,133.75,466.18,397.49,3019.03,4975.61,2743.28,1359.09,1715.37,2231.02,1780.03,668.88,2483.97,1461.58,848.68,454.43,606.85,536.85,3914.39,466.28,423.93,2404.19,-374.94,1007.88,689.47,117.46,1010.51,-423.55,2876.14,-513.8,-283.63,1884.11,742.02,2724.09,3653.05,1185.64,1122.85,655.32,1642.85,1438.61,1103.12,1580.7,1587.62,-662.57,876.4,203.01,591.92,475.82,3988.16,2389.71,3209.66,-451.99,11815.81,-1159.27,2271.59,2536.14,1178.83,1658.58,3401.73,1678.09,-2961.96,6401.53,2515.98,5550.4,3136.45,723.42,625.87,2208.35,2546.82,1534.77,673.94,170.59,41.38,727.96,1509.99,1530.19,1424.12,8503.37,2924.28,2581.16,-2981.63,436.2,-300.52,2161.71,1623.57,1811.96,1046.03,1847.28,817.71,3005.08,1551.63,2668.29,1129.96,419.08,1869.0,1785.63,1592.25,298.04,5330.56,1815.39,3958.69,860.71,3401.24,3240.86,1061.49,3067.69,2203.68,3707.01,831.2,-815.97,1133.35,5940.77,3316.61,1507.22,684.45,1569.63,3979.81,1032.07],"O":[7,8,10,6,8,7,8,6,15,10,16,14,20,26,10,10,16,16,19,12,19,17,18,9,18,15,13,19,16,14,15,20,14,20,17,29,27,39,29,19,24,20,11,36,25,35,42,35,29,30,28,42,17,6,5,6,9,12,6,8,12,15,16,23,18,15,20,18,14,19,12,15,15,24,9,19,19,18,18,16,13,13,10,21,15,15,14,33,29,38,42,24,18,15,20,25,35,34,39,36,50,41,34,35,13,11,9,14,12,15,7,14,9,20,31,18,14,19,25,25,17,17,27,19,24,29,20,28,23,26,15,18,29,26,16,16,23,22,25,58,35,42,50,27,19,17,31,27,42,51,41,44,49,45,35,39,28,6,16,20,20,13,13,17,10,24,25,31,27,30,21,26,32,28,31,26,30,28,24,33,33,29,29,30,17,29,27,23,18,35,25,54,59,50,57,41,29,34,41,25,66,67,64,53,72,57,40,55,24],"C":[7,8,10,6,8,7,8,6,15,10,16,14,19,26,10,10,16,16,17,12,18,17,18,9,17,15,13,19,16,14,15,20,13,19,17,29,27,37,28,18,23,18,11,35,25,35,40,34,28,30,28,40,16,6,4,6,9,12,6,8,12,15,15,23,18,15,20,17,14,19,12,15,14,23,9,19,19,18,17,16,13,13,10,19,15,15,13,31,29,37,42,23,18,15,18,25,34,32,39,36,47,39,33,32,13,11,9,14,12,15,7,12,9,20,31,18,14,18,25,24,17,17,25,19,23,29,20,31,23,26,15,17,28,26,15,16,23,21,25,58,34,41,48,26,18,17,29,25,39,49,41,43,47,40,34,38,28,6,16,20,20,13,13,17,10,24,25,33,27,30,21,26,31,28,30,26,29,28,24,32,33,29,28,29,17,28,27,22,18,33,25,53,52,48,56,41,27,34,39,25,64,62,60,53,68,56,37,54,24]};
+const K = 207; // 2026-12-20 week (weeks counted from Sunday 2023-01-01)
+
+const DAY = 86400000, t0 = Date.parse(WK.start + 'T00:00:00Z');
+const W = WK.S.map((s, k) => ({ k, start: t0 + 7 * k * DAY, end: t0 + (7 * k + 6) * DAY, s, p: WK.P[k], o: WK.O[k], aov: WK.O[k] ? s / WK.O[k] : 0 }));
+
+const pad = v => String(v).padStart(2, '0');
+const md = t => { const d = new Date(t); return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`; };
+const ymd = t => { const d = new Date(t); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+const usd = v => (v < 0 ? '−' : '') + '$' + (Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toFixed(1) + 'K' : Math.abs(v).toFixed(0));
+const cnt = v => Math.round(v) + '件';
+const pct = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v * 100).toFixed(1) + '%';
+const usdD = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + '$' + (Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toFixed(1) + 'K' : Math.abs(v).toFixed(0));
+const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+const sd = a => { const m = mean(a); return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / (a.length - 1)); };
+
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const lin = (d0, d1, r0, r1) => v => d1 === d0 ? (r0 + r1) / 2 : r0 + (v - d0) / (d1 - d0) * (r1 - r0);
+const path = pts => pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('');
+function barPath(x, y0, y1, w, r) {
+  const up = y1 < y0, h = Math.abs(y0 - y1); r = Math.min(r, w / 2, h);
+  if (up) return `M${x} ${y0}V${y1 + r}Q${x} ${y1} ${x + r} ${y1}H${x + w - r}Q${x + w} ${y1} ${x + w} ${y1 + r}V${y0}Z`;
+  return `M${x} ${y0}V${y1 - r}Q${x} ${y1} ${x + r} ${y1}H${x + w - r}Q${x + w} ${y1} ${x + w} ${y1 - r}V${y0}Z`;
+}
+const svg = (W_, H) => el('svg', { viewBox: `0 0 ${W_} ${H}`, class: 'chart', role: 'img' });
+
+// Comparison stats: mean is the Yes/No line, mean ± 1 SD is the expected range
+const stats = ws => key => { const a = ws.map(w => w[key]); const m = mean(a), s = sd(a); return { m, lo: m - s, hi: m + s }; };
+const pos = (v, b) => v > b.hi ? 'above' : v < b.lo ? 'below' : 'in';
+
+function meanLine(s, y, m, fmt, W_, label) {
+  el('line', { x1: 0, x2: W_, y1: y(m), y2: y(m), stroke: 'var(--mean)', 'stroke-width': 1.25, 'stroke-dasharray': '4 3' }, s);
+
+}
+
+// Row 1: this year's last 14 weeks as bars over the prior-13-week range
+function recentBars(key, b, fmt, W_ = 180, H = 104) {
+  // 13 comparison weeks, a gap, then this week in its own highlighted column
+  const s = svg(W_, H), prior = W.slice(K - 13, K), vals = prior.map(w => w[key]).concat(cur[key]);
+  const lo = Math.min(0, ...vals, b.lo), hi = Math.max(...vals, b.hi) * 1.18;
+  const top = 14, bot = H - 16, y = lin(lo, hi, bot, top), zero = y(0);
+  const slot = W_ / 14.8, bw = slot - 3, cmpW = 13 * slot, cx = 13.8 * slot;
+  el('rect', { x: cx - 2, y: 0, width: slot + 4, height: bot + 2, rx: 4, fill: 'var(--hl)' }, s);
+  el('rect', { x: 0, y: y(b.hi), width: cmpW, height: Math.max(0, y(b.lo) - y(b.hi)), fill: 'var(--ly-band-solid)' }, s);
+  el('line', { x1: 0, x2: W_, y1: zero, y2: zero, stroke: 'var(--rule)' }, s);
+  prior.forEach((w, i) => {
+    el('path', { d: barPath(i * slot + 1.5, zero, y(w[key]), bw, 3), fill: 'var(--context)' }, s);
+    el('rect', { x: i * slot, y: top - 10, width: slot, height: bot - top + 10, class: 'hit', 'data-tip': `${ymd(w.start)}週　${fmt(w[key])}` }, s);
+  });
+  el('line', { x1: 0, x2: cmpW, y1: y(b.m), y2: y(b.m), stroke: 'var(--mean)', 'stroke-width': 1.25, 'stroke-dasharray': '4 3' }, s);
+  // Guide from the mean to this week so the gap reads directly
+  el('line', { x1: cmpW, x2: cx + slot, y1: y(b.m), y2: y(b.m), stroke: 'var(--mean)', 'stroke-width': 1, 'stroke-dasharray': '1.5 2.5' }, s);
+  el('path', { d: barPath(cx + 1.5, zero, y(cur[key]), bw, 3), fill: 'var(--this)' }, s);
+  el('rect', { x: cx - 2, y: top - 10, width: slot + 4, height: bot - top + 10, class: 'hit', 'data-tip': `今週 ${ymd(cur.start)}　${fmt(cur[key])}` }, s);
+  el('text', { x: W_, y: Math.max(y(cur[key]) - 5, 10), 'text-anchor': 'end', class: 'cur-lbl' }, s, fmt(cur[key]));
+  el('text', { x: cmpW / 2, y: H - 3, 'text-anchor': 'middle' }, s, `直前13週 ${md(prior[0].start)}〜${md(prior[12].start)}`);
+  el('text', { x: W_, y: H - 3, 'text-anchor': 'end', class: 'cur-axis' }, s, '今週');
+  return s;
+}
+
+// Rows 2–3: this year's 13 weeks vs last year's same 13 weeks, with last year's mean and range
+const tyW = W.slice(K - 12, K + 1), lyW = W.slice(K - 64, K - 51);
+function yoyLines(key, b, fmt, W_ = 180, H = 112) {
+  const s = svg(W_, H), ty = tyW.map(w => w[key]), ly = lyW.map(w => w[key]);
+  const lo = Math.min(0, ...ty, ...ly, b.lo), hi = Math.max(...ty, ...ly, b.hi) * 1.14;
+  const top = 14, bot = H - 16, R = W_ - 8, x = lin(0, 12, 4, R), y = lin(lo, hi, bot, top);
+  const step = (R - 4) / 12;
+  el('rect', { x: x(12) - step / 2 - 2, y: 0, width: W_ - (x(12) - step / 2 - 2), height: bot + 2, rx: 4, fill: 'var(--hl)' }, s);
+  el('rect', { x: 0, y: y(b.hi), width: W_, height: Math.max(0, y(b.lo) - y(b.hi)), fill: 'var(--ly-band-solid)' }, s);
+  el('line', { x1: 0, x2: W_, y1: y(0), y2: y(0), stroke: 'var(--rule)' }, s);
+  el('path', { d: path(ly.map((v, i) => [x(i), y(v)])), fill: 'none', stroke: 'var(--ly-line)', 'stroke-width': 1.25, 'stroke-linejoin': 'round' }, s);
+  el('line', { x1: 0, x2: W_, y1: y(b.m), y2: y(b.m), stroke: 'var(--mean)', 'stroke-width': 1.25, 'stroke-dasharray': '4 3' }, s);
+  el('path', { d: path(ty.map((v, i) => [x(i), y(v)])), fill: 'none', stroke: 'var(--this)', 'stroke-width': 2.25, 'stroke-linejoin': 'round' }, s);
+  el('circle', { cx: x(12), cy: y(ty[12]), r: 5.5, fill: 'var(--this)', stroke: '#fff', 'stroke-width': 2 }, s);
+  const ly12 = y(ty[12]) < (top + bot) / 2 ? y(ty[12]) + 16 : y(ty[12]) - 9;
+  el('text', { x: x(12) - 8, y: ly12, 'text-anchor': 'end', class: 'cur-lbl' }, s, fmt(ty[12]));
+  tyW.forEach((w, i) => el('rect', { x: x(i) - step / 2, y: top - 10, width: step, height: bot - top + 10, class: 'hit', 'data-tip': `${i === 12 ? '今週 ' : ''}${ymd(w.start)}週　今年 ${fmt(ty[i])}　前年 ${fmt(ly[i])}` }, s));
+  el('text', { x: 0, y: H - 3 }, s, md(tyW[0].start));
+  el('text', { x: W_, y: H - 3, 'text-anchor': 'end', class: 'cur-axis' }, s, '今週');
+  return s;
+}
+
+const cur = W[K];
+const recent = stats(W.slice(K - 13, K)), lastYear = stats(lyW);
+
+// Yes/No: at or above the comparison mean. The supplement states the gap as a fact and whether it left the range.
+function judge(key, b, scope) {
+  const v = cur[key], p = pos(v, b), yes = v >= b.m;
+  const gap = key === 's' ? pct(v / b.m - 1) : usdD(v - b.m);
+  const note = p === 'in'
+    ? `<span class="note in">平均比 ${gap}・${scope}の範囲内</span>`
+    : `<span class="note alert">⚠ 注目：${scope}の${p === 'above' ? '上限超え' : '下限割れ'}（${key === 's' ? pct(v / (p === 'above' ? b.hi : b.lo) - 1) : usdD(v - (p === 'above' ? b.hi : b.lo))}）</span>`;
+  return { yes, alert: p !== 'in', pos: p, note };
+}
+function upDown(key, b) {
+  const up = tyW.filter(w => w[key] > b.hi).length, dn = tyW.filter(w => w[key] < b.lo).length;
+  return `直近13週: 範囲より上 <b>${up}</b>・下 <b>${dn}</b>`;
+}
+
+const specs = [
+  { row: 0, no: 1, key: 's', b: recent('s'), fmt: usd, scope: '普段', chart: recentBars },
+  { row: 0, no: 3, key: 'p', b: recent('p'), fmt: usd, scope: '普段', chart: recentBars },
+  { row: 1, no: 2, key: 's', b: lastYear('s'), fmt: usd, scope: '前年', chart: yoyLines },
+  { row: 1, no: 4, key: 'p', b: lastYear('p'), fmt: usd, scope: '前年', chart: yoyLines },
+].map(c => ({ ...c, ...judge(c.key, c.b, c.scope) }));
+
+const ROWS = [
+  { q: '今週は普段より良かったか？', note: '直前13週の平均と比べて' },
+  { q: '去年の同じ時期より良かったか？', note: `前年 ${ymd(lyW[0].start)}〜${md(lyW[12].end)} の13週の平均と比べて` },
+];
+
+const chip = yes => `<span class="chip ${yes ? 'yes' : 'no'}"><span aria-hidden="true">${yes ? '✓' : '✕'}</span>${yes ? 'Yes' : 'No'}</span>`;
+const host = document.getElementById('rows');
+ROWS.forEach((r, ri) => {
+  const row = document.createElement('section');
+  row.className = 'row';
+  row.id = 'r' + (ri + 1);
+  row.innerHTML = `<p class="row-q">${r.q}<small>${r.note}</small></p>`;
+  const pair = document.createElement('div');
+  pair.className = 'pair';
+  specs.filter(c => c.row === ri).forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'cell';
+    d.innerHTML = (c.cq ? `<div class="cell-q">${c.cq}</div>` : '') +
+      `<div class="cell-top"><span class="qn">Q${c.no}</span>${chip(c.yes)}</div>` +
+      `<div class="kpi">${c.fmt(cur[c.key])}</div>` +
+      `<div class="sub">${c.scope === '普段' ? '普段の平均' : '前年平均'} <b>${c.fmt(c.b.m)}</b>` + (c.row > 0 ? `<br>${upDown(c.key, c.b)}` : '') + `</div>` +
+      c.note;
+    d.appendChild(c.chart(c.key, c.b, c.fmt));
+    pair.appendChild(d);
+  });
+  row.appendChild(pair);
+  host.appendChild(row);
+});
+
+// Header strip: every answer at a glance; out-of-range answers carry an alert mark
+const groups = [['Sales 売上', [1, 2]], ['Profit 利益', [3, 4]]];
+const byNo = n => specs.find(c => c.no === n);
+document.getElementById('strip').innerHTML = groups.map(([label, nos]) =>
+  `<div class="grp"><span class="grp-l">${label}</span><div class="grp-c">` +
+  nos.map(n => { const c = byNo(n); return `<a href="#r${c.row + 1}" class="${c.yes ? 'yes' : 'no'}${c.alert ? ' alert' : ''}" aria-label="Q${n} ${c.yes ? 'Yes' : 'No'}${c.alert ? '、注目' : ''}"><span class="mark" aria-hidden="true">${c.yes ? '✓' : '✕'}</span>Q${n}</a>`; }).join('') +
+  `</div></div>`).join('');
+const alerts = specs.filter(c => c.alert);
+document.getElementById('tally').innerHTML = `${ymd(cur.start)}（日）〜 ${md(cur.end)}（土）　` +
+  (alerts.length ? `<span class="warn">注目 ${alerts.length}件</span>` : '注目なし');
+
+// One-line summary built only from the judgments, the way a pushed notification would read
+const metric = { s: '売上', p: '利益' };
+const alertText = alerts.map(c => `${metric[c.key]}が${c.scope}の範囲を${c.pos === 'above' ? '上回りました' : '下回りました'}`);
+document.getElementById('headline').innerHTML = alerts.length
+  ? `⚠ ${alertText.join('。')}。ほかは範囲内です。`
+  : '今週はすべて範囲内。普段どおりの週です。';
+
+document.getElementById('reading').innerHTML =
+  `ヘッダーの一言が、この週の答えです。利益（Q3）は直前13週の範囲の上限を超えたので「注目」です。売上は普段の平均をわずかに下回って Q1 が No ですが、補足のとおり平均比 −3.1% で範囲内です。前年と比べた Q2・Q4 は、どちらも前年平均より上で範囲内でした。`;
+
+const tip = document.getElementById('tip');
+document.addEventListener('pointermove', e => {
+  const t = e.target.closest && e.target.closest('[data-tip]');
+  if (!t) { tip.hidden = true; return; }
+  tip.textContent = t.getAttribute('data-tip');
+  tip.hidden = false;
+  const half = tip.offsetWidth / 2 + 8;
+  tip.style.left = Math.min(Math.max(e.clientX, half), window.innerWidth - half) + 'px';
+  tip.style.top = e.clientY + 'px';
+});
+document.addEventListener('pointerleave', () => { tip.hidden = true; });
+</script>
