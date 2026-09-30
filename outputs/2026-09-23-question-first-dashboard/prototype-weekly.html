@@ -113,7 +113,7 @@ svg text.lbl-this { fill: var(--ink); font-weight: 600; }
 
   <aside class="notes">
     <section>
-      <div class="eyebrow">Prototype v4 · WOW draft</div>
+      <div class="eyebrow">Prototype v5 · WOW draft</div>
       <h2>このプロトタイプについて</h2>
       <p>WOW 公式データリポジトリの <b>Sample - Superstore-2026.xlsx</b> で計算しています。対象週は <b>2026-12-20〜12/26</b> に固定しました。週の選択は Tableau 側のパラメータで実装する前提です。</p>
       <p>問いは2種類だけです。「最近の自分たちと比べて普段並みか」と「去年の同じ時期と比べてどうか」。これを売上・利益・注文数・注文単価の4つの指標で答えます。チャートは1種類（棒 + 帯）にそろえました。</p>
@@ -121,6 +121,8 @@ svg text.lbl-this { fill: var(--ink); font-weight: 600; }
     <section>
       <h2>帯の読み方</h2>
       <p>1行目の帯は、直前13週の平均 ± 1標準偏差です。2行目以降の帯は、<b>前年の同じ13週</b>（52週前にずらした13週）の平均 ± 1標準偏差です。棒は今年の直近13週です。</p>
+      <p>Yes の基準は行によって変えています。1行目は異常を拾う問いなので、帯の下限（平均 − 1標準偏差）以上なら Yes です。2行目以降は「去年並み以上か」を問うので、前年13週の平均（点線）以上なら Yes です。</p>
+      <p>前年の13週は、日付ではなく52週前にずらして取ります。曜日がそろい、1月のように年をまたぐ週でもそのまま計算できます。</p>
       <p>2行目以降では、棒を帯との位置で塗り分けています。<span style="color:var(--this);font-weight:600">青は帯より上</span>、灰は帯の中、<span style="color:var(--below);font-weight:600">橙は帯より下</span>です。今週（右端）だけ濃く塗っています。今週だけの話なのか、ここ数週ずっとそうなのかが、色の並びで分かります。</p>
     </section>
     <section>
@@ -259,12 +261,12 @@ const ROWS = [
     { no: 3, yes: cur.p >= bp[0] && cur.p > 0, kpi: usd(cur.p), sub: `普段 <b>${usd(bp[2])}</b>`, chart: () => bandBars(last14, 'p', bp, usd) },
   ] },
   { q: '去年の同じ時期並み以上だったか？', note: lyNote, cells: [
-    { no: 2, yes: cur.s >= ls[0], kpi: usd(cur.s), sub: `前年 <b>${usd(ls[2])}</b><br>${tally('s', ls)}`, chart: () => lyBars('s', ls, usd) },
-    { no: 4, yes: cur.p >= lp[0] && cur.p > 0, kpi: usd(cur.p), sub: `前年 <b>${usd(lp[2])}</b><br>${tally('p', lp)}`, chart: () => lyBars('p', lp, usd) },
+    { no: 2, yes: cur.s >= ls[2], kpi: usd(cur.s), sub: `前年 <b>${usd(ls[2])}</b><br>${tally('s', ls)}`, chart: () => lyBars('s', ls, usd) },
+    { no: 4, yes: cur.p >= lp[2], kpi: usd(cur.p), sub: `前年 <b>${usd(lp[2])}</b><br>${tally('p', lp)}`, chart: () => lyBars('p', lp, usd) },
   ] },
   { q: '売上の中身は去年の同じ時期並み以上か？', note: `売上 = 注文数 × 注文単価。${lyNote}`, split: true, cells: [
-    { no: 5, cq: '注文数', yes: cur.o >= lo_[0], kpi: cnt(cur.o), sub: `前年 <b>${cnt(lo_[2])}</b><br>${tally('o', lo_)}`, chart: () => lyBars('o', lo_, cnt) },
-    { no: 6, cq: '注文単価', yes: cur.aov >= la[0], kpi: usd(cur.aov), sub: `前年 <b>${usd(la[2])}</b><br>${tally('aov', la)}`, chart: () => lyBars('aov', la, usd) },
+    { no: 5, cq: '注文数', yes: cur.o >= lo_[2], kpi: cnt(cur.o), sub: `前年 <b>${cnt(lo_[2])}</b><br>${tally('o', lo_)}`, chart: () => lyBars('o', lo_, cnt) },
+    { no: 6, cq: '注文単価', yes: cur.aov >= la[2], kpi: usd(cur.aov), sub: `前年 <b>${usd(la[2])}</b><br>${tally('aov', la)}`, chart: () => lyBars('aov', la, usd) },
   ] },
 ];
 
@@ -298,7 +300,7 @@ document.getElementById('strip').innerHTML = groups.map(([label, nos, cls]) =>
   nos.map(n => { const c = byNo(n); return `<a href="#r${c.row}" class="${c.yes ? 'yes' : 'no'}" aria-label="Q${n} ${c.q} ${c.yes ? 'Yes' : 'No'}"><span class="mark" aria-hidden="true">${c.yes ? '✓' : '✕'}</span>Q${n}</a>`; }).join('') +
   `</div></div>`).join('');
 const yesCount = all.filter(c => c.yes).length;
-document.getElementById('reading').innerHTML = '6問すべて Yes です。ただし帯との位置を見ると、中身は一様ではありません。注文数は13週中7週で前年の帯より上にあり、「今週だけでなく、ここ数週ずっと客が多い」状態です。一方、注文単価は13週すべてが帯の中にあり、今週の $393 は前年平均の $505 を下回っています。売上が去年並み以上なのは、客数が支えているからだと読めます。';
+document.getElementById('reading').innerHTML = '6問中5問が Yes で、No は注文単価（Q6）だけです。注文数は13週中7週で前年の帯より上にあり、「今週だけでなく、ここ数週ずっと客が多い」状態です。一方、注文単価は今週 $393 で、前年平均の $505 を下回っています。ただし13週すべてが帯の中なので、単価の下落は「異常」ではなく「やや低め」の範囲です。売上が去年並み以上なのは、客数が支えているからだと読めます。';
 document.getElementById('tally').innerHTML = `${ymd(cur.start)}（日）〜 ${md(cur.end)}（土）　6問中 <b>${yesCount}</b> 問が Yes`;
 
 const tip = document.getElementById('tip');
