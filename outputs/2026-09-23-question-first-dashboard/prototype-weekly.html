@@ -18,6 +18,8 @@
   --prior: #8f8d84;
   --context: #d6d3c8;
   --below: #eb6834;
+  --ly-band: rgba(143, 141, 132, .26);
+  --ty-band: rgba(42, 120, 214, .18);
   --yes-ink: #17693a;
   --yes-bg: #e2f1e7;
   --no-ink: #a3281f;
@@ -113,17 +115,18 @@ svg text.lbl-this { fill: var(--ink); font-weight: 600; }
 
   <aside class="notes">
     <section>
-      <div class="eyebrow">Prototype v5 · WOW draft</div>
+      <div class="eyebrow">Prototype v6 · WOW draft</div>
       <h2>このプロトタイプについて</h2>
       <p>WOW 公式データリポジトリの <b>Sample - Superstore-2026.xlsx</b> で計算しています。対象週は <b>2026-12-20〜12/26</b> に固定しました。週の選択は Tableau 側のパラメータで実装する前提です。</p>
-      <p>問いは2種類だけです。「最近の自分たちと比べて普段並みか」と「去年の同じ時期と比べてどうか」。これを売上・利益・注文数・注文単価の4つの指標で答えます。チャートは1種類（棒 + 帯）にそろえました。</p>
+      <p>問いは2種類だけです。「最近の自分たちと比べて普段並みか」と「去年の同じ時期と比べてどうか」。これを売上・利益・注文数・注文単価の4つの指標で答えます。1行目は棒グラフ、2行目以降は今年と前年を重ねた折れ線グラフです。</p>
     </section>
     <section>
       <h2>帯の読み方</h2>
-      <p>1行目の帯は、直前13週の平均 ± 1標準偏差です。2行目以降の帯は、<b>前年の同じ13週</b>（52週前にずらした13週）の平均 ± 1標準偏差です。棒は今年の直近13週です。</p>
-      <p>Yes の基準は行によって変えています。1行目は異常を拾う問いなので、帯の下限（平均 − 1標準偏差）以上なら Yes です。2行目以降は「去年並み以上か」を問うので、前年13週の平均（点線）以上なら Yes です。</p>
+      <p>1行目は棒グラフです。帯は直前13週の平均 ± 1標準偏差です。</p>
+      <p>2行目以降は折れ線グラフです。<span style="color:var(--this);font-weight:600">青い線</span>が今年の直近13週、<span style="color:var(--prior);font-weight:600">灰色の線</span>が<b>前年の同じ13週</b>です。それぞれの13週の平均 ± 1標準偏差を、同じ色の薄い帯で重ねています。2本の帯のずれが、去年と今年の「普段」の違いです。</p>
+      <p>Yes の基準は行によって変えています。1行目は異常を拾う問いなので、帯の下限（平均 − 1標準偏差）以上なら Yes です。2行目以降は「去年並み以上か」を問うので、前年13週の平均（灰色の帯の中心）以上なら Yes です。</p>
       <p>前年の13週は、日付ではなく52週前にずらして取ります。曜日がそろい、1月のように年をまたぐ週でもそのまま計算できます。</p>
-      <p>2行目以降では、棒を帯との位置で塗り分けています。<span style="color:var(--this);font-weight:600">青は帯より上</span>、灰は帯の中、<span style="color:var(--below);font-weight:600">橙は帯より下</span>です。今週（右端）だけ濃く塗っています。今週だけの話なのか、ここ数週ずっとそうなのかが、色の並びで分かります。</p>
+      <p>「13週中 上・中・下」は、今年の各週が前年の帯より上・帯の中・帯より下だった週数です。今週だけの話なのか、ここ数週ずっとそうなのかを数字でも示します。</p>
     </section>
     <section>
       <h2>この週の読み方</h2>
@@ -224,24 +227,24 @@ const lyW = W.slice(K - 64, K - 51);   // last year's same 13 weeks
 const tyW = W.slice(K - 12, K + 1);    // this year's latest 13 weeks
 const lyBand = key => { const a = lyW.map(w => w[key]); const m = mean(a), s = sd(a); return [m - s, m + s, m]; };
 
-// Bars of this year's weeks against last year's same-period band, colored by position
-function lyBars(key, band, fmt, W_ = 180, H = 84) {
-  const s = svg(W_, H), vals = tyW.map(w => w[key]);
-  const lo = Math.min(0, ...vals, band[0]), hi = Math.max(...vals, band[1]) * 1.12;
-  const top = 14, bot = H - 16, y = lin(lo, hi, bot, top), zero = y(0);
-  el('rect', { x: 0, y: y(band[1]), width: W_, height: Math.max(0, y(band[0]) - y(band[1])), fill: 'var(--band)' }, s);
-  el('line', { x1: 0, x2: W_, y1: y(band[2]), y2: y(band[2]), stroke: 'var(--prior)', 'stroke-dasharray': '3 3' }, s);
-  el('line', { x1: 0, x2: W_, y1: zero, y2: zero, stroke: 'var(--rule)' }, s);
-  const slot = W_ / tyW.length, bw = slot - 3;
-  tyW.forEach((w, i) => {
-    const v = w[key], pos = v > band[1] ? 'above' : v < band[0] ? 'below' : 'in';
-    const fill = pos === 'above' ? 'var(--this)' : pos === 'below' ? 'var(--below)' : 'var(--context)';
-    const last = i === tyW.length - 1;
-    el('path', { d: barPath(i * slot + 1.5, zero, y(v), bw, 3), fill, 'fill-opacity': last ? 1 : 0.5 }, s);
-    const lyv = lyW[i][key];
-    el('rect', { x: i * slot, y: top - 10, width: slot, height: bot - top + 10, class: 'hit', 'data-tip': `${ymd(w.start)}週　${fmt(v)}（前年同週 ${fmt(lyv)}）` }, s);
+// This year's and last year's 13 weeks as two lines, each with its own mean ± 1 SD band
+function lyLines(key, band, fmt, W_ = 180, H = 112) {
+  const s = svg(W_, H), ty = tyW.map(w => w[key]), ly = lyW.map(w => w[key]);
+  const a = ty; const tm = mean(a), ts = sd(a), tb = [tm - ts, tm + ts];
+  const lo = Math.min(0, ...ty, ...ly, band[0], tb[0]), hi = Math.max(...ty, ...ly, band[1], tb[1]) * 1.1;
+  const top = 16, bot = H - 16, R = W_ - 6, x = lin(0, 12, 4, R), y = lin(lo, hi, bot, top);
+  const bandRect = (b, fill) => el('rect', { x: 4, y: y(b[1]), width: R - 4, height: Math.max(0, y(b[0]) - y(b[1])), fill }, s);
+  bandRect(band, 'var(--ly-band)');
+  bandRect(tb, 'var(--ty-band)');
+  el('line', { x1: 0, x2: W_, y1: y(0), y2: y(0), stroke: 'var(--rule)' }, s);
+  [[ly, 'var(--prior)'], [ty, 'var(--this)']].forEach(([vs, c]) => {
+    el('path', { d: path(vs.map((v, i) => [x(i), y(v)])), fill: 'none', stroke: c, 'stroke-width': 1.75, 'stroke-linejoin': 'round' }, s);
   });
-  el('text', { x: W_, y: Math.max(y(vals[vals.length - 1]) - 4, 9), 'text-anchor': 'end', class: 'lbl-this' }, s, fmt(vals[vals.length - 1]));
+  el('circle', { cx: x(12), cy: y(ly[12]), r: 3, fill: 'var(--prior)', stroke: '#fff', 'stroke-width': 1.5 }, s);
+  el('circle', { cx: x(12), cy: y(ty[12]), r: 4, fill: 'var(--this)', stroke: '#fff', 'stroke-width': 1.5 }, s);
+  const step = (R - 4) / 12;
+  tyW.forEach((w, i) => el('rect', { x: x(i) - step / 2, y: top - 10, width: step, height: bot - top + 10, class: 'hit', 'data-tip': `${ymd(w.start)}週　今年 ${fmt(ty[i])}　前年 ${fmt(ly[i])}` }, s));
+  legend(s);
   el('text', { x: 0, y: H - 3 }, s, md(tyW[0].start));
   el('text', { x: W_, y: H - 3, 'text-anchor': 'end' }, s, md(cur.start));
   return s;
@@ -261,12 +264,12 @@ const ROWS = [
     { no: 3, yes: cur.p >= bp[0] && cur.p > 0, kpi: usd(cur.p), sub: `普段 <b>${usd(bp[2])}</b>`, chart: () => bandBars(last14, 'p', bp, usd) },
   ] },
   { q: '去年の同じ時期並み以上だったか？', note: lyNote, cells: [
-    { no: 2, yes: cur.s >= ls[2], kpi: usd(cur.s), sub: `前年 <b>${usd(ls[2])}</b><br>${tally('s', ls)}`, chart: () => lyBars('s', ls, usd) },
-    { no: 4, yes: cur.p >= lp[2], kpi: usd(cur.p), sub: `前年 <b>${usd(lp[2])}</b><br>${tally('p', lp)}`, chart: () => lyBars('p', lp, usd) },
+    { no: 2, yes: cur.s >= ls[2], kpi: usd(cur.s), sub: `前年 <b>${usd(ls[2])}</b><br>${tally('s', ls)}`, chart: () => lyLines('s', ls, usd) },
+    { no: 4, yes: cur.p >= lp[2], kpi: usd(cur.p), sub: `前年 <b>${usd(lp[2])}</b><br>${tally('p', lp)}`, chart: () => lyLines('p', lp, usd) },
   ] },
   { q: '売上の中身は去年の同じ時期並み以上か？', note: `売上 = 注文数 × 注文単価。${lyNote}`, split: true, cells: [
-    { no: 5, cq: '注文数', yes: cur.o >= lo_[2], kpi: cnt(cur.o), sub: `前年 <b>${cnt(lo_[2])}</b><br>${tally('o', lo_)}`, chart: () => lyBars('o', lo_, cnt) },
-    { no: 6, cq: '注文単価', yes: cur.aov >= la[2], kpi: usd(cur.aov), sub: `前年 <b>${usd(la[2])}</b><br>${tally('aov', la)}`, chart: () => lyBars('aov', la, usd) },
+    { no: 5, cq: '注文数', yes: cur.o >= lo_[2], kpi: cnt(cur.o), sub: `前年 <b>${cnt(lo_[2])}</b><br>${tally('o', lo_)}`, chart: () => lyLines('o', lo_, cnt) },
+    { no: 6, cq: '注文単価', yes: cur.aov >= la[2], kpi: usd(cur.aov), sub: `前年 <b>${usd(la[2])}</b><br>${tally('aov', la)}`, chart: () => lyLines('aov', la, usd) },
   ] },
 ];
 
