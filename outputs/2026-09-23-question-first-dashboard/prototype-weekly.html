@@ -131,7 +131,7 @@ svg text.mean-lbl { fill: var(--mean); font-size: 9px; font-weight: 600; paint-o
       <div class="eyebrow">Superstore · Weekly check-in</div>
       <h1>今週、私たちはうまくいっている？</h1>
       <div class="tally" id="tally"></div>
-      <nav class="strip" id="strip" aria-label="6つの問いの答え"></nav>
+      <nav class="strip" id="strip" aria-label="4つの問いの答え"></nav>
     </header>
     <div class="cols" aria-hidden="true"><div>Sales 売上</div><div>Profit 利益</div></div>
     <div class="key" aria-hidden="true">
@@ -145,7 +145,7 @@ svg text.mean-lbl { fill: var(--mean); font-size: 9px; font-weight: 600; paint-o
 
   <aside class="notes">
     <section>
-      <div class="eyebrow">Prototype v7 · WOW draft</div>
+      <div class="eyebrow">Prototype v8 · WOW draft</div>
       <h2>このプロトタイプについて</h2>
       <p>WOW 公式データリポジトリの <b>Sample - Superstore-2026.xlsx</b> で計算しています。対象週は <b>2026-12-20〜12/26</b> に固定しました。週の選択は Tableau 側のパラメータで実装する前提です。</p>
       <p>各問いには2段階で答えます。まず Yes / No で「比較期間の平均より良かったか」を答えます。次に、その差が比較期間の範囲に収まっているかを補足します。範囲の外に出た週は「注目」として、ヘッダーのチップにも印を付けます。</p>
@@ -162,7 +162,7 @@ svg text.mean-lbl { fill: var(--mean); font-size: 9px; font-weight: 600; paint-o
       <h2>比較期間</h2>
       <ul>
         <li><b>1行目（普段より良かったか）</b>: 直前13週（今週を含まない）。</li>
-        <li><b>2・3行目（去年より良かったか）</b>: 前年の同じ13週（52週前にずらした13週）。曜日がそろい、年をまたぐ週もそのまま計算できます。</li>
+        <li><b>2行目（去年より良かったか）</b>: 前年の同じ13週（52週前にずらした13週）。曜日がそろい、年をまたぐ週もそのまま計算できます。</li>
         <li>範囲はどちらも、比較期間の平均 ± 1標準偏差です。</li>
       </ul>
     </section>
@@ -278,14 +278,11 @@ const specs = [
   { row: 0, no: 3, key: 'p', b: recent('p'), fmt: usd, scope: '普段', chart: recentBars },
   { row: 1, no: 2, key: 's', b: lastYear('s'), fmt: usd, scope: '前年', chart: yoyLines },
   { row: 1, no: 4, key: 'p', b: lastYear('p'), fmt: usd, scope: '前年', chart: yoyLines },
-  { row: 2, no: 5, key: 'o', b: lastYear('o'), fmt: cnt, scope: '前年', chart: yoyLines, cq: '注文数' },
-  { row: 2, no: 6, key: 'aov', b: lastYear('aov'), fmt: usd, scope: '前年', chart: yoyLines, cq: '注文単価' },
 ].map(c => ({ ...c, ...judge(c.key, c.b, c.scope) }));
 
 const ROWS = [
   { q: '今週は普段より良かったか？', note: '直前13週の平均と比べて' },
   { q: '去年の同じ時期より良かったか？', note: `前年 ${ymd(lyW[0].start)}〜${md(lyW[12].end)} の13週の平均と比べて` },
-  { q: '売上の中身は去年の同じ時期より良かったか？', note: '売上 = 注文数 × 注文単価。前年の同じ13週の平均と比べて' },
 ];
 
 const chip = yes => `<span class="chip ${yes ? 'yes' : 'no'}"><span aria-hidden="true">${yes ? '✓' : '✕'}</span>${yes ? 'Yes' : 'No'}</span>`;
@@ -313,17 +310,17 @@ ROWS.forEach((r, ri) => {
 });
 
 // Header strip: every answer at a glance; out-of-range answers carry an alert mark
-const groups = [['Sales 売上', [1, 2]], ['Profit 利益', [3, 4]], ['中身', [5, 6]]];
+const groups = [['Sales 売上', [1, 2]], ['Profit 利益', [3, 4]]];
 const byNo = n => specs.find(c => c.no === n);
 document.getElementById('strip').innerHTML = groups.map(([label, nos]) =>
   `<div class="grp"><span class="grp-l">${label}</span><div class="grp-c">` +
   nos.map(n => { const c = byNo(n); return `<a href="#r${c.row + 1}" class="${c.yes ? 'yes' : 'no'}${c.alert ? ' alert' : ''}" aria-label="Q${n} ${c.yes ? 'Yes' : 'No'}${c.alert ? '、注目' : ''}"><span class="mark" aria-hidden="true">${c.yes ? '✓' : '✕'}</span>Q${n}</a>`; }).join('') +
   `</div></div>`).join('');
 const yesCount = specs.filter(c => c.yes).length, alerts = specs.filter(c => c.alert);
-document.getElementById('tally').innerHTML = `${ymd(cur.start)}（日）〜 ${md(cur.end)}（土）　6問中 <b>${yesCount}</b> 問が Yes` +
+document.getElementById('tally').innerHTML = `${ymd(cur.start)}（日）〜 ${md(cur.end)}（土）　4問中 <b>${yesCount}</b> 問が Yes` +
   (alerts.length ? `・<span class="warn">注目 ${alerts.length}件</span>` : '・注目なし');
 
-const name = { 1: '売上（普段比）', 3: '利益（普段比）', 2: '売上（前年比）', 4: '利益（前年比）', 5: '注文数', 6: '注文単価' };
+const name = { 1: '売上（普段比）', 3: '利益（普段比）', 2: '売上（前年比）', 4: '利益（前年比）' };
 document.getElementById('reading').innerHTML =
   `注目は ${alerts.map(c => `Q${c.no} ${name[c.no]}（${c.pos === 'above' ? '上振れ' : '下振れ'}）`).join('、') || 'ありません'}。` +
   `それ以外の問いは、Yes でも No でも比較期間の範囲内で、平均との差はノイズの範囲です。Q1 の売上は普段の平均を少し下回って No ですが、注視は不要です。`;
