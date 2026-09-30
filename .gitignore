@@ -42,3 +42,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Playwright MCP session artifacts (screenshots, snapshots, console logs)
+.playwright-mcp/
