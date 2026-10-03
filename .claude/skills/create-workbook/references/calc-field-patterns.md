@@ -12,7 +12,7 @@ note: 式の書き方だけを扱う。XML の骨格は twb-skeleton-cheatsheet.
 - LOD式（ネスト LOD、期間の平均・SD、行ごとの文字列の連結）
 - テーブル計算
 - 日付関数
-- パラメータを使った動的切替
+- パラメータを使った動的切替（選べる週を絞る動的パラメータ）
 - カラー条件分岐
 - TWB XMLエスケープのリマインド
 
@@ -132,6 +132,15 @@ END
 ```
 RANK(SUM([Sales])) <= [Top N]
 ```
+
+### 選べる週を絞る（動的パラメータの値の元）
+週を選ばせるときは、日付の範囲ではなく週の始まりのリストにする（週の途中の日付を選べると利用者が迷う）。動的パラメータ（ブックを開いたときにフィールドから値を取る）の元にする計算で、対象外の週を NULL にすれば候補を絞れる。NULL は選択肢に出ない。
+```
+// Parameter list: the 8 week starts up to the default week
+IF [Week] >= DATEADD('week', -7, #2026-08-09#) AND [Week] <= #2026-08-09#
+THEN [Week] END
+```
+XML では、パラメータの `<column>` に `param-domain-type='list'` と `source-field='[データソース名].[計算の内部名]'` を書き、`<members>` は置かない（Desktop 2026.2 が保存した形）。
 
 ## カラー条件分岐
 

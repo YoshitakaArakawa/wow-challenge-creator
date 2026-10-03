@@ -3,7 +3,7 @@ purpose: 生成した TWB が Tableau Desktop で開けない・表示が崩れ�
 sources:
   - https://github.com/tableau/tableau-plugin
   - https://github.com/tableau/tableau-document-schemas
-fetched_at: 2026-10-01
+fetched_at: 2026-10-03
 source_last_known_update: 不明
 note: create-workbook で rawXml・後処理スクリプトを使って TWB を組み立てるときの落とし穴集。XML の骨格は twb-skeleton-cheatsheet.md、式の書き方は calc-field-patterns.md が担当し、ここは「XSD を通っても Desktop で失敗するもの」と「見た目が崩れるもの」に絞る。
 ---
@@ -72,6 +72,8 @@ note: create-workbook で rawXml・後処理スクリプトを使って TWB を�
 ```
 
 - 文字列の値は `<bucket>&quot;This year&quot;</bucket>` のように `&quot;` で囲む。
+- 表示用の文字列がそのまま色の値を兼ねているフィールド（例：`Yes ▲` / `No`）は、文言を変えると割り当てが外れる。式と `<bucket>` を同時に直す。
+- 配色を差し替えるときに hex を TWB 全体で置換するなら、同じ hex が別の役割（例：前年の線と区切り線）に使われていないかを先に数える。重なっていれば、文脈（`<bucket>` やゾーンの書式）で役割ごとに分けてから置換する。
 
 ## マークとシェルフ
 
@@ -94,7 +96,11 @@ note: create-workbook で rawXml・後処理スクリプトを使って TWB を�
 ```
 
 - `type='sample'` が標本SD、`population` が母SD。帯の色は `<style-rule element='refband'>` の `fill-color`、線は `element='refline'` で指定する。
+- 色で分けた線の重なり順は、色の凡例の並び順で決まる。先頭の項目が最前面に描かれる。主役の線を前に出すには、色のフィールドに手動ソート（下記）を付けて先頭にする。
+- マークのサイズ（`<format attr='size'>`）は小数で指定できる。Cloud の 2 倍描画で、線は 0.6 で約 7px、0.1 で約 3px。円はサイズの値にほぼ比例して直径が変わる（1.26 で 22px、1.0 で 18px）。
 - 定数フィールドの値に線を引くなら、そのフィールドを詳細に置き、`formula='min'`・`scope='per-table'`・`value-column` に指定する。
+- 見出しの文字の書式は `<style-rule element='header'>` に書く。行見出しは `field` 指定で色・太さが効く。列見出しの色は `scope='cols'`（`field` なし）で効く。列見出しの太字は XML でも Desktop でも効かなかった（未解決）。
+- 表の区切り線（`element='table-div'`）で行の間に線を出すには `div-level` を 1 にする。区切り線は見出しの段・列にもかかるので、タイルの間だけを区切りたいときはマークの枠線（viz-techniques.md）を使う。
 - 離散ピルの「ヘッダーの表示」オフは `<style-rule element='label'>` に `<format attr='display' field='[ds].[none:X:nk]' value='false' />`（class / scope なし）で書く。`element='header'` の `display` は無視される。連続軸の非表示は `element='axis'` に `scope` 付きで書く。
 - ビュー内の手動ソートは `<sort class='manual' column='…' direction='ASC'><dictionary><bucket>&quot;A&quot;</bucket>…</dictionary></sort>` を `<filter>` の後・`<aggregation>` の前に置く。XSD が要求する `<manual-sort>` は Desktop に拒否される（XSD と Desktop の食い違い。XSD 検証のエラーは無視してよい）。
 
@@ -106,9 +112,11 @@ note: create-workbook で rawXml・後処理スクリプトを使って TWB を�
 
 ## ダッシュボード
 
-- テキストだけのシートが `#####` の1行になるのは、ゾーンの高さが行数に足りないとき。行数 × 行の高さ＋余白以上の高さを取るか、高さ固定を外す。
+- シート（テキスト表・テキストだけのシート）が `#####` になるのは、多くはダッシュボード上の表示の高さが足りないとき（次に多いのは幅）。直すときは、そのシートのゾーンの高さを足すか、ダッシュボード自体の高さを足す。高さの目安は行数 × 行の高さ＋余白。
 - 固定サイズのゾーン高さの合計に、ゾーンごとの margin（上下）とコンテナの margin を足した値が、ダッシュボードの高さに収まるようにする。溢れた分は画面外に出て見えなくなる。
 - `renderDashboard` は全シートを縦に等分するだけ。横並びや固定高さが要るレイアウトは、後処理で `<dashboards>` と `<windows>` を書く。
+- 縦の流れコンテナで、表のシート（KPI のテキスト表）の近くに新しいテキストゾーンを足したら、その表が `#####` になり、ゾーンの大きさを変えても直らなかったことがある。凡例などの短い文は、新しいゾーンにせず、既存のテキストゾーン（段の見出しなど）の行として足す。
+- 複数のゾーンを 1 枚の色の面（パネル）に載せるには、コンテナとその子ゾーンの `zone-style` に `background-color` を書き、中のシートの `<style-rule element='table'>` にも同じ `background-color` を書く。シート側に書かないと、シートの白が面の上に塗られる。
 - パラメータ操作は `<zone type-v2='paramctrl' param='[Parameters].[Parameter 1]' mode='type_in' .../>` で置ける。
 
 ## データソースの Pivot

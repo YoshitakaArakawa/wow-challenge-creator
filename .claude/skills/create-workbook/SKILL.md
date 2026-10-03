@@ -30,7 +30,7 @@ WOW の解答は人間が作り直すもの。動くだけでなく、熟練の 
 
 式の型は [references/calc-field-patterns.md](references/calc-field-patterns.md)（ネスト LOD の平均・SD、行ごとの文字列の連結）を使う。
 
-見た目の課題（色付きタイル、強調点、ラベルの重なり、目標・前年との比較など）は、計算や工程を足す前に [references/viz-techniques.md](references/viz-techniques.md) の定石から選ぶ。少ない手順で済み、参加者にも馴染みのある作り方になる。
+見た目の課題（色付きタイル、強調点、ラベルの重なり、目標・前年との比較など）は、計算や工程を足す前に [references/viz-techniques.md](references/viz-techniques.md) の定石から選ぶ。少ない手順で済み、参加者にも馴染みのある作り方になる。色・強弱・見せ場の決め方は [references/dashboard-design.md](references/dashboard-design.md) に従う。
 
 ## 標準手順
 
@@ -88,7 +88,7 @@ XSD検証の結果は「構造が正しい」までで、Desktop で開けるこ
 - 計算式・フィールド参照・データソース接続は検証対象外
 - `document-format-change-manifest` の機能フラグに依存する属性（例: パラメータの `period-type-v2`、参照線の `tooltip-type`）は XSD を通っても Desktop で拒否される。新しい属性は、テンプレと同じ `source-build`・同じ manifest を持つ実ブックに現れるものだけを使う
 - 逆に XSD が要求しても Desktop が拒否する要素がある（例: 手動ソートは `<manual-sort>` ではなく `<sort class='manual'>`）。Desktop で開けるならその XSD エラーは無視する。既知の食い違いは [references/twb-pitfalls.md](references/twb-pitfalls.md) にある
-- 構文が分からない要素は推測で書かず、Desktop で同じ操作をして `.twb` に別名保存し、その XML を写す
+- 構文が分からない要素は推測で書かず、Desktop で同じ操作をして `.twb` に別名保存し、その XML を写す。GitHub のコード検索で見つからないとき（例：動的パラメータ）は、ユーザーに 1 回作って保存してもらうのが速い
 
 ### Step 5: refine ループで表示を詰める
 
@@ -127,6 +127,8 @@ npx tsx $SKILL/scripts/iterate.ts --twbx "$THEME_DIR/refine/2026W40.twbx" [--vie
 
 見せ方の変更（レイアウト・文言・情報の削減）は、TWB より先にドラフト HTML で合意する。HTML は数秒で直せ、publish の待ちがない。`prototype/` の原案は要件段階の記録として残し、改訂は `refine/refine.html` を上書きする。版番号は付けない。HTML では Tableau で再現できる表現だけを使う。高さ不足の `#####` や空白の追加のような機械的な修正は、HTML を挟まず TWB を直す。
 
+ドラフトの横のメモ欄には、いま議論している論点だけを置く（案の切り替え、決めてほしいこと、Tableau での実装の見込み）。合意した変更はドラフト本体に反映してメモから消し、経緯は `refine/HANDOFF.md` に残す。変更点を積み上げると、どこを見てほしいのかが埋もれる。
+
 ループの回し方:
 
 1. `refine/wb-build/*.twb` を直接編集する（生成からやり直すならパッチ JSON を直して Step 4 を再実行する）
@@ -143,6 +145,8 @@ Cloud 側の画像キャッシュで前回の絵が返ることがある（1 分
 Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認する。Cloud では通るが Desktop が拒否する属性があるため、この確認は省かない。
 
 - 開き直しはユーザーに頼む（Desktop で開いている版は再生成しても更新されない。保存せずに閉じてから開き直す）
+- Desktop で `refine/YYYYWNN.twbx` に上書き保存しない。`iterate.ts` は毎回 `wb-build` の TWB から作り直すので、その変更は次のラウンドで消える。Desktop での変更は `tmp/` に別名で保存し、XML を写して `wb-build` に反映する
+- Computer Use で Desktop を操作すると、Windows の入力パネル（`textinputhost.exe`）が前面を奪い、クリックがすべて拒否されることがある。数十秒で済む単発の操作（書式を 1 つ変えて別名保存する等）はユーザーに頼む
 - 問題なければ Step 5 の最後の publish が公開版になる。`refine/publish-result.json` の `webpageUrl` を次の `create-x-post` が読む
 
 ## パッチJSON仕様
@@ -214,6 +218,7 @@ Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認
 - [references/twb-skeleton-cheatsheet.md](references/twb-skeleton-cheatsheet.md) — TWB XML骨格チートシート
 - [references/calc-field-patterns.md](references/calc-field-patterns.md) — 計算フィールド/LOD/パラメータの実例XML
 - [references/twb-pitfalls.md](references/twb-pitfalls.md) — XSDを通ってもDesktopで失敗・表示崩れする原因と回避規範（引用符・書式・色・線・テキスト・レイアウト・フォルダ分け）
+- [references/dashboard-design.md](references/dashboard-design.md) — 色（明るさの 3 段、色は意味にだけ）・見せ場・線の強弱・出題の既定値の選び方と、案を HTML で比べて決める進め方
 - [references/viz-techniques.md](references/viz-techniques.md) — 少ない手順で見た目が良くなる定石（`MIN(1.0)` タイル、二重軸の強調点、別メジャーの参照帯、ラベル設定など）と実証済みの XML
 - [references/chart-recipes/](references/chart-recipes/) — チャート種別ごとのレシピXML（プレースホルダ `{{NAME}}` 形式）
 - `references/schemas/` — Tableau公式XSDの最新スナップショットを置く手元キャッシュ（gitignore対象。新機能の構文を読むときに `update-schemas.ts` で取得）

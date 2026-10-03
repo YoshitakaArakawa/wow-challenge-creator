@@ -45,6 +45,7 @@ note: 日本語コミュニティ（Tableau 女子会、個人 note、企業ブ�
 | 正負で分けるカスタム数値書式（▲▼、+/−） | 増減の向きを計算なしで示す | 書式を「正;負;ゼロ」で書き分ける | 1〜2、計算 0 | 実証済み（twb-pitfalls.md） |
 | BAN / KPI カード | 最重要の数値を即座に読ませる | テキストマークで大きな数値、比較を小さく併記する | 3、計算 0〜2 | 実証済み |
 | コンテナ・余白・均等配分 | 要素が詰まる、まとまりが見えない | 縦横コンテナで「均等に配分」、余白をそろえる | 3〜5、計算 0 | 実証済み（twb-pitfalls.md） |
+| 最新期の手前で止まる平均線 | アナリティクスの平均線が最新期のペインにも引かれる | 最新期だけ NULL を返すシート専用の計算を詳細に置き、平均線をその値のペイン平均にする | 3、計算 0（アドホック） | 実証済み |
 
 ## B：場面に応じて使う定石
 
@@ -61,6 +62,9 @@ note: 日本語コミュニティ（Tableau 女子会、個人 note、企業ブ�
 | 前年を薄い面、今年を線 | 2 期間の主役と背景を分ける | 前年を面か棒にして不透明度 10〜40%、今年を線にする | 4〜5、計算 0〜1 | 実証済み |
 | 箇条グラフ（Bullet graph） | 実績と目標を省スペースで比べる | 実績を列、目標を詳細に置き、参照線と分布帯を足す | 3〜4、計算 0 | 実証済み |
 | ツールヒントの整形 | ホバー時の情報過多 | 不要項目を消し、太字と単位で整える | 1〜2、計算 0 | 未実証 |
+| マークの枠線 | 強調点や色付きタイルの輪郭がぼける。タイルの境目が見えない | 色の「枠線」で線の色を指定する。強調点は線と同じ色、タイルは白 | 1、計算 0 | 実証済み |
+| 主役の線を前面に | 比較の線が主役の線の上に重なる | 色の凡例で主役の項目を先頭に並べ替える | 1、計算 0 | 実証済み（twb-pitfalls.md） |
+| 答えのパネル | 画面のどこが結論か分からない | 結論のまとまり（見出しとタイル）を入れたコンテナに淡い背景色を付ける | 2、計算 0 | 実証済み（twb-pitfalls.md） |
 
 ハイライト表（四角マークにメジャーを色とラベル）は広く勧められるが、生成した TWB では四角のサイズ指定でセルが埋まりきらない。色付きタイルは `MIN(1.0)` のダミー軸で作る。
 
@@ -170,6 +174,36 @@ note: 日本語コミュニティ（Tableau 女子会、個人 note、企業ブ�
     </style-rule>
   </style>
 </pane>
+```
+
+### 最新期の手前で止まる平均線
+
+列に「今週か」の判定を置いて今週を別ペインにしても、ペインごとの平均線は今週のペインに今週の値で 1 本引かれる。今週だけ NULL を返すアドホック計算を詳細に置き、平均線の `value-column` にすると、今週のペインは値が無く線が出ない。データソースの計算フィールドは増えない。
+
+```xml
+<!-- worksheet の datasource-dependencies -->
+<column caption='Previous Weeks Value' datatype='real' name='[Calculation_901]' role='measure' type='quantitative'>
+  <calculation class='tableau' formula='SUM(IF NOT [Is This Week] THEN [Value] END)' />
+</column>
+<column-instance column='[Calculation_901]' derivation='User' name='[usr:Calculation_901:qk]' pivot='key' type='quantitative' />
+
+<!-- ペイン -->
+<lod column='[ds].[usr:Calculation_901:qk]' />
+<reference-line axis-column='[ds].[sum:Value:qk]' value-column='[ds].[usr:Calculation_901:qk]' formula='average'
+    id='refline0' label-type='none' scope='per-pane' enable-instant-analytics='false' z-order='2' />
+```
+
+線を今週の位置まで延ばしたいなら、平均の定数フィールドを詳細に置き `formula='min'`・`scope='per-table'` にする（twb-pitfalls.md の定数フィールドの線）。
+
+### マークの枠線
+
+ペインの `element='mark'` に書く。線の太さは指定できず、細い線で固定。隣り合うタイルはそれぞれ枠を描くので、境目は 2 本分の幅になる。
+
+```xml
+<style-rule element='mark'>
+  <format attr='has-stroke' value='true' />
+  <format attr='stroke-color' value='#ffffff' />  <!-- タイルの境目は白。強調点は線と同じ色 -->
+</style-rule>
 ```
 
 ### ラベルの表示条件
