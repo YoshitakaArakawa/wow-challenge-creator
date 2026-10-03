@@ -45,6 +45,7 @@ note: 日本語コミュニティ（Tableau 女子会、個人 note、企業ブ�
 | 正負で分けるカスタム数値書式（▲▼、+/−） | 増減の向きを計算なしで示す | 書式を「正;負;ゼロ」で書き分ける | 1〜2、計算 0 | 実証済み（twb-pitfalls.md） |
 | BAN / KPI カード | 最重要の数値を即座に読ませる | テキストマークで大きな数値、比較を小さく併記する | 3、計算 0〜2 | 実証済み |
 | コンテナ・余白・均等配分 | 要素が詰まる、まとまりが見えない | 縦横コンテナで「均等に配分」、余白をそろえる | 3〜5、計算 0 | 実証済み（twb-pitfalls.md） |
+| 空白 1 個の区切り線 | 線用と余白用に空白を 3 個並べると、オブジェクトが増えて階層が読みにくい | 背景色を付けた空白に外側のパディングを入れ、内側に残った部分を線に見せる | 1、計算 0 | 実証済み |
 | 最新期の手前で止まる平均線 | アナリティクスの平均線が最新期のペインにも引かれる | 最新期だけ NULL を返すシート専用の計算を詳細に置き、平均線をその値のペイン平均にする | 3、計算 0（アドホック） | 実証済み |
 
 ## B：場面に応じて使う定石
@@ -194,6 +195,24 @@ note: 日本語コミュニティ（Tableau 女子会、個人 note、企業ブ�
 ```
 
 線を今週の位置まで延ばしたいなら、平均の定数フィールドを詳細に置き `formula='min'`・`scope='per-table'` にする（twb-pitfalls.md の定数フィールドの線）。
+
+### 空白 1 個の区切り線
+
+線の太さは `fixed-size`、線の上下の余白は `margin-top` / `margin-bottom`、線の長さは `margin-left` / `margin-right` で決まる。`fixed-size` に外側のパディングは含めない（twb-pitfalls.md の「ダッシュボード」）。
+
+```xml
+<!-- 太さ 2px・上下の余白 14px。Desktop の高さ欄は 30 になる -->
+<zone id='105' type-v2='empty' fixed-size='2' is-fixed='true' x='2857' y='14368' w='94286' h='2874'>
+  <zone-style>
+    <format attr='border-style' value='none' />
+    <format attr='background-color' value='#caced3' />
+    <format attr='margin-top' value='14' />
+    <format attr='margin-bottom' value='14' />
+    <format attr='margin-left' value='150' />
+    <format attr='margin-right' value='150' />
+  </zone-style>
+</zone>
+```
 
 ### マークの枠線
 
