@@ -118,7 +118,9 @@ npx tsx $SKILL/scripts/iterate.ts --twbx "$THEME_DIR/refine/2026W40.twbx" [--vie
 
 - 一覧は `iterate.ts` が書き出す `compare-data.js` から読む。「Reload both」はこのファイルとドラフト・PNG を読み直す
 - ドラフト HTML を足しただけで publish しないときは、`iterate.ts --twbx ... --compare-only` で一覧だけ更新する
-- ユーザーと画面を見ながら進めるときは、このページを Chrome で開いて共有する。Claude in Chrome で開くには、Chrome の拡張機能の詳細で「ファイルの URL へのアクセスを許可する」をオンにする
+- ユーザーと画面を見ながら進めるときは、このページを Chrome で開いて共有する。Claude in Chrome で読むには次の 2 つが要る
+  - 拡張機能の詳細で「ファイルの URL へのアクセスを許可する」をオンにする。切り替えると拡張機能が再読み込みされ、既存のタブグループは Claude から見えなくなるので、タブグループは作り直す
+  - `navigate` は `file://` を `https://` に書き換えるため使えない。Claude のタブグループに空タブを作り、ユーザーにそのアドレスバーへ file URL を貼ってもらう。以後の読み取り（`get_page_text`・`javascript_tool`・スクリーンショット）は動く
 - Claude Code デスクトップの組み込みブラウザは `file://` を静的スナップショットにするため、`compare-data.js` を読めず空になる。使わない
 
 見せ方の変更（レイアウト・文言・情報の削減）は、TWB より先にドラフト HTML で合意する。HTML は数秒で直せ、publish の待ちがない。`prototype/` の原案は要件段階の記録として残し、改訂は `refine/refine.html` を上書きする。版番号は付けない。HTML では Tableau で再現できる表現だけを使う。高さ不足の `#####` や空白の追加のような機械的な修正は、HTML を挟まず TWB を直す。
