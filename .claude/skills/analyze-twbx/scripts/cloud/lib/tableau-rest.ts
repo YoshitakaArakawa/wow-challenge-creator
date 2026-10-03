@@ -15,14 +15,17 @@ const API_VERSION = "3.22";
 export interface TableauEnv {
   serverUrl: string;
   siteContentUrl: string;
-  patName: string;
-  patValue: string;
+  /** Set only when PAT auth is configured; otherwise the cached OAuth session is used. */
+  patName?: string;
+  patValue?: string;
 }
 
 export interface Session {
   token: string;
   siteId: string;
   userId: string;
+  /** true = PAT sign-in (sign out on exit); false = cached OAuth session (keep alive). */
+  viaPat: boolean;
 }
 
 export interface WorkbookSummary {
@@ -37,58 +40,93 @@ export interface WorkbookSummary {
 }
 
 export function loadEnv(): TableauEnv {
-  const required = ["TABLEAU_SERVER_URL", "TABLEAU_PAT_NAME", "TABLEAU_PAT_VALUE"] as const;
-  const missing = required.filter((k) => !process.env[k]);
-  if (missing.length) {
-    throw new Error(
-      `Missing required env vars: ${missing.join(", ")}. Configure them in ${path.join(REPO_ROOT, ".env")}`,
-    );
+  if (!process.env.TABLEAU_SERVER_URL) {
+    throw new Error(`Missing required env var TABLEAU_SERVER_URL. Configure it in ${path.join(REPO_ROOT, ".env")}`);
   }
+  const patName = process.env.TABLEAU_PAT_NAME;
+  const patValue = process.env.TABLEAU_PAT_VALUE;
   return {
-    serverUrl: process.env.TABLEAU_SERVER_URL!.replace(/\/$/, ""),
+    serverUrl: process.env.TABLEAU_SERVER_URL.replace(/\/$/, ""),
     siteContentUrl: process.env.TABLEAU_SITE_ID ?? "",
-    patName: process.env.TABLEAU_PAT_NAME!,
-    patValue: process.env.TABLEAU_PAT_VALUE!,
+    patName: patName && patValue ? patName : undefined,
+    patValue: patName && patValue ? patValue : undefined,
   };
+}
+
+// Written by publish-to-cloud/scripts/tableau_auth.py after the OAuth browser sign-in.
+const AUTH_CACHE_PATH = path.join(REPO_ROOT, ".auth-cache", "session.json");
+const LOGIN_HINT = "Run `python .claude/skills/publish-to-cloud/scripts/tableau_auth.py login` to sign in through the browser.";
+
+interface CachedSession {
+  server_url: string;
+  site_name: string;
+  access_token: string;
+}
+
+function readCachedSession(env: TableauEnv): CachedSession {
+  if (!fs.existsSync(AUTH_CACHE_PATH)) {
+    throw new Error(`No cached Tableau Cloud session at ${AUTH_CACHE_PATH}. ${LOGIN_HINT}`);
+  }
+  const cache = JSON.parse(fs.readFileSync(AUTH_CACHE_PATH, "utf8")) as CachedSession;
+  if (cache.server_url !== env.serverUrl || cache.site_name !== env.siteContentUrl || !cache.access_token) {
+    throw new Error(`Cached session does not match .env (server/site). ${LOGIN_HINT}`);
+  }
+  return cache;
+}
+
+function makeClient(env: TableauEnv, session: Session): AxiosInstance {
+  return axios.create({
+    baseURL: `${env.serverUrl}/api/${API_VERSION}/sites/${session.siteId}`,
+    headers: { "X-Tableau-Auth": session.token, Accept: "application/json" },
+  });
 }
 
 export async function signIn(env: TableauEnv): Promise<{ session: Session; client: AxiosInstance }> {
-  const body = {
-    credentials: {
-      personalAccessTokenName: env.patName,
-      personalAccessTokenSecret: env.patValue,
-      site: { contentUrl: env.siteContentUrl },
-    },
-  };
-
-  const url = `${env.serverUrl}/api/${API_VERSION}/auth/signin`;
-  const res = await axios.post(url, body, {
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-  });
-
-  const creds = res.data?.credentials;
-  if (!creds?.token || !creds?.site?.id) {
-    throw new Error(`signin response missing credentials: ${JSON.stringify(res.data)}`);
+  if (env.patName && env.patValue) {
+    const body = {
+      credentials: {
+        personalAccessTokenName: env.patName,
+        personalAccessTokenSecret: env.patValue,
+        site: { contentUrl: env.siteContentUrl },
+      },
+    };
+    const res = await axios.post(`${env.serverUrl}/api/${API_VERSION}/auth/signin`, body, {
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+    });
+    const creds = res.data?.credentials;
+    if (!creds?.token || !creds?.site?.id) {
+      throw new Error(`signin response missing credentials: ${JSON.stringify(res.data)}`);
+    }
+    const session: Session = { token: creds.token, siteId: creds.site.id, userId: creds.user?.id ?? "", viaPat: true };
+    return { session, client: makeClient(env, session) };
   }
 
+  // OAuth path: reuse the token cached by tableau_auth.py. The access_token is `id1|id2|site-luid`.
+  const cache = readCachedSession(env);
+  const parts = cache.access_token.split("|");
+  if (parts.length !== 3) {
+    throw new Error(`Cached access_token has an unexpected shape. ${LOGIN_HINT}`);
+  }
+  let current;
+  try {
+    current = await axios.get(`${env.serverUrl}/api/${API_VERSION}/sessions/current`, {
+      headers: { "X-Tableau-Auth": cache.access_token, Accept: "application/json" },
+    });
+  } catch {
+    throw new Error(`Cached Tableau Cloud session expired. ${LOGIN_HINT}`);
+  }
   const session: Session = {
-    token: creds.token,
-    siteId: creds.site.id,
-    userId: creds.user?.id ?? "",
+    token: cache.access_token,
+    siteId: parts[2],
+    userId: current.data?.session?.user?.id ?? "",
+    viaPat: false,
   };
-
-  const client = axios.create({
-    baseURL: `${env.serverUrl}/api/${API_VERSION}/sites/${session.siteId}`,
-    headers: {
-      "X-Tableau-Auth": session.token,
-      Accept: "application/json",
-    },
-  });
-
-  return { session, client };
+  return { session, client: makeClient(env, session) };
 }
 
 export async function signOut(env: TableauEnv, session: Session): Promise<void> {
+  // An OAuth session is shared through the cache; signing out would invalidate it for the next script.
+  if (!session.viaPat) return;
   await axios.post(`${env.serverUrl}/api/${API_VERSION}/auth/signout`, undefined, {
     headers: { "X-Tableau-Auth": session.token },
   });

@@ -88,20 +88,40 @@ XSD検証の結果は「構造が正しい」までで、Desktop で開けるこ
 - 逆に XSD が要求しても Desktop が拒否する要素がある（例: 手動ソートは `<manual-sort>` ではなく `<sort class='manual'>`）。Desktop で開けるならその XSD エラーは無視する。既知の食い違いは [references/twb-pitfalls.md](references/twb-pitfalls.md) にある
 - 構文が分からない要素は推測で書かず、Desktop で同じ操作をして `.twb` に別名保存し、その XML を写す
 
-### Step 5: 目視確認 → パブリッシュへ
+### Step 5: Cloud 描画ループで表示を詰める
 
-- 生成された `.twbx` をTableau Desktopで開いて確認
-  - 開き直しはユーザーに頼む（Desktop で開いている版は再生成しても更新されない。保存せずに閉じてから開き直す）
-  - ゾーンごとの表示確認を繰り返す場合は Computer Use のサブエージェントに任せる。確認観点は「空白ゾーン」「期待値との一致」「色・線・折り返し」
-  - 空白のシートや `#####` 表示の原因は [references/twb-pitfalls.md](references/twb-pitfalls.md) で当たる
-- 問題なければ `publish-to-cloud` Skillで Cloud へパブリッシュ
+Desktop は開いているワークブックを XML から再読込できないので、表示の試行錯誤は Cloud を描画エンジンにして回す。`.env` に Cloud の PAT が要る（publish-to-cloud Skill の前提）。
+
+```bash
+npx tsx $SKILL/scripts/iterate.ts --patch "$PATCH" [--views "Dashboard"]
+```
+
+`iterate.ts` は `validate-twb.ts` → `repack-twbx.ts` → `publish.py --overwrite --render` を順に実行し、各ビューの PNG を `outputs/{theme}/tmp/render/` に落として結果 JSON を出す。XSD 検証は含まないので、Step 4 の 3b を通した後に始める。
+
+ループの回し方:
+
+1. `tmp/wb-build/*.twb` を直接編集するか、パッチ JSON を直して `apply-edits.ts` を再実行する
+2. `iterate.ts` を実行する
+3. `renders[].png` を Read し、要件・`prototype.html` と比べて差分を列挙する。観点は「空白ゾーン」「期待値との一致」「色・線・折り返し」「`#####` 表示」
+4. 差分があれば 1 に戻る。空白シートや `#####` の原因は [references/twb-pitfalls.md](references/twb-pitfalls.md) で当たる
+
+PNG は静止画なので、ツールヒント・パラメータ・ハイライト動作は `webpageUrl` をブラウザで開いて確かめる。ブラウザや Desktop の画面操作はサブエージェント（Computer Use）に委ね、1 回の委任は「どのビューの何を見るか」1 件に絞る。
+
+Cloud 側の画像キャッシュで前回の絵が返ることがある（1 分未満の連続 publish）。変化が見えないときは 1 分待って `iterate.ts` を再実行する。
+
+### Step 6: Desktop で最終確認
+
+Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認する。Cloud では通るが Desktop が拒否する属性があるため、この確認は省かない。
+
+- 開き直しはユーザーに頼む（Desktop で開いている版は再生成しても更新されない。保存せずに閉じてから開き直す）
+- 問題なければ Step 5 の最後の publish が公開版になる。`tmp/publish-result.json` の `webpageUrl` を次の `create-x-post` が読む
 
 ## パッチJSON仕様
 
 ```json
 {
   "baseTemplate": "common/WOW Challenge Template (Save a copy) .twbx",
-  "outputPath": "outputs/{theme}/WOW2026 W{N}.twbx",
+  "outputPath": "outputs/{theme}/2026W40.twbx",
   "workingDir": "outputs/{theme}/tmp/wb-build",
   "dataSourceSwap": null,
   "parameters": [
@@ -158,6 +178,7 @@ XSD検証の結果は「構造が正しい」までで、Desktop で開けるこ
 - `calculatedFields[].formula` には改行と `//` コメントを書いてよい（TWB では `&#13;&#10;` に変換される）
 - `calculatedFields[].folder` を指定すると、データペインのそのフォルダに入る（`<folders-common>` に追記。同名フォルダがあれば合流）。フォルダの切り方は [references/twb-pitfalls.md](references/twb-pitfalls.md) の「計算フィールドの整理」に従う
 - `workingDir` を省略すると `outputPath` のディレクトリ + `tmp/wb-build` を自動使用
+- `outputPath` のファイル名は `YYYYWNN.twbx`（WOW の週番号を 2 桁ゼロ埋め）。Cloud 上のワークブック名はこのファイル名から決まる
 
 ## 参照ファイル
 
@@ -181,4 +202,4 @@ pip install -r vendor/tableau-plugin/scripts/requirements.txt   # XSD検証用�
 - **Phase 1 制約**: データソース置換なし（`dataSourceSwap` は未実装）、レシピは `bar-chart` / `line-chart` / `dual-axis` の3つのみ。レシピで表せないシートは `rawXml` で渡す
 - `parameters` はテンプレに `<datasource name='Parameters'>` がある場合のみ挿入できる。現行テンプレには無いので、パラメータを使う出題は別途追加する
 - XSD検証は 2025.1 より古い `source-build` のブックを検証できない
-- Tableau Desktop自動検証CLIは存在しない（最終確認は手動）
+- Tableau Desktop自動検証CLIは存在しない。描画の自動確認は Cloud 経由（Step 5）で行い、Desktop での最終確認は手動（Step 6）

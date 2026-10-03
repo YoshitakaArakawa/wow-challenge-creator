@@ -37,9 +37,9 @@ WOW出題は次のパイプラインで作成する。各ステップは対応�
 [2] create-requirements   ← 任意で prototype.html を併産
       ↓ (requirements-{ja,en}.md 確定)
 [3] create-workbook
-      ↓ (WOW{YYYY} W{N}.twbx 生成、Desktop で目視確認)
+      ↓ (YYYYWNN.twbx 生成 → Cloud 描画ループで表示を詰める → Desktop で最終確認)
 [4] publish-to-cloud
-      ↓ (tmp/publish-result.json に Cloud URL)
+      ↓ (tmp/publish-result.json に Cloud URL。[3] のループ最終回がそのまま公開版)
 [5] create-x-post
       ↓ (x-post.txt)
 ```
@@ -53,6 +53,22 @@ WOW出題は次のパイプラインで作成する。各ステップは対応�
 | Cloud上のWBをpull して現状確認したい (協働ループ) | `analyze-twbx` (Cloud経路) | [4] 以降のループ |
 | ユーザーが手動でTWBX作成 | — | [3] スキップして配置 → [4] |
 | 出題ごとの非公開アセット | — | `Archived/` に隔離（gitignore済み） |
+
+### ワークブック命名と投稿先
+
+- Cloud 上のワークブック名と `.twbx` ファイル名は `YYYYWNN`（例: `2026W40`）。タイトルは付けない
+- 投稿先プロジェクトは `.env` の `TABLEAU_PROJECT_NAME`（既定 `99_WorkoutWednesday`）
+
+### 描画ループ (Step 3 の内側)
+
+Tableau Desktop は開いているワークブックを XML から再読込できない。表示の試行錯誤は Cloud を描画エンジンにして回す:
+
+```
+TWB 編集 → create-workbook iterate.ts (検証 → repack → publish --overwrite --render)
+→ tmp/render/*.png を Claude が読む → 差分をフィードバック → TWB 編集 …
+```
+
+静止画で判断できない動作（ツールヒント・パラメータ・ハイライト）はブラウザで Cloud URL を開いて確かめる。画面操作はサブエージェントに委ねる。
 
 ### 協働ループ (Step 4以降)
 
@@ -73,6 +89,7 @@ publish後はユーザーがCloudで微修正することがある。次のル�
 | `tmp/workbook-patch.json` | create-workbook | (内部) |
 | `tmp/cloud-pulled.twbx` | analyze-twbx (Cloud経路) | (Claude読み込み) |
 | `*.twbx` | create-workbook | publish-to-cloud |
+| `tmp/render/*.png` | publish-to-cloud (`--render`) | create-workbook (描画ループ、Claude 読み込み) |
 | `tmp/publish-result.json` | publish-to-cloud | create-x-post |
 | `backup/{wb}.twbx` | publish-to-cloud (overwrite時) | (ロールバック用) |
 | `x-post.txt` | create-x-post | (最終成果物) |
@@ -96,4 +113,4 @@ npx tsx update-schemas.ts
 cd .claude/skills/publish-to-cloud/scripts && pip install -r requirements.txt
 ```
 
-`.env` はリポジトリ直下に置き（`.env.example` をコピーして使う）、`publish-to-cloud` と `analyze-twbx` の Cloud経路から参照される。
+`.env` はリポジトリ直下に置き（`.env.example` をコピーして使う）、`publish-to-cloud` と `analyze-twbx` の Cloud経路から参照される。Cloud 認証は OAuth のブラウザサインインで、初回は `python .claude/skills/publish-to-cloud/scripts/tableau_auth.py login` を実行してユーザーにサインインしてもらう。セッションは `.auth-cache/` に保存され両 Skill で共用される。

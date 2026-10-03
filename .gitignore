@@ -35,6 +35,7 @@ Thumbs.db
 
 # Environment / secrets
 .env
+.auth-cache/
 .env.*
 !.env.example
 *.pem
@@ -51,3 +52,6 @@ Thumbs.db
 
 # create-workbook: local snapshot of tableau-document-schemas (fetched by update-schemas.ts)
 .claude/skills/create-workbook/references/schemas/
+
+# Python bytecode
+__pycache__/

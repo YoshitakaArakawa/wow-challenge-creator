@@ -49,17 +49,17 @@ npx tsx .claude/skills/analyze-twbx/scripts/twbx/download.ts <workbookName> --ou
 publish後にCloud上で微修正されたワークブックを取得し、差分を解析する用途。
 
 ### 前提
-リポジトリ直下の `.env` に Tableau Cloud の PAT 認証情報が設定されていること（`.env.example` 参照）。
+リポジトリ直下の `.env` に `TABLEAU_SERVER_URL` / `TABLEAU_SITE_ID` があり、OAuth セッションがキャッシュされていること。セッションがない・失効したときは publish-to-cloud Skill の `tableau_auth.py login` でブラウザサインインしてもらう（`.auth-cache/session.json` を共用）。
 
 ### 使い方
 
 ```bash
 # サイト内のワークブック一覧 (名前検索したい時)
-npx tsx .claude/skills/analyze-twbx/scripts/cloud/list-workbooks.ts [--project "WOW Challenges"]
+npx tsx .claude/skills/analyze-twbx/scripts/cloud/list-workbooks.ts [--project "99_WorkoutWednesday"]
 
 # 名前またはIDで指定してダウンロード
 npx tsx .claude/skills/analyze-twbx/scripts/cloud/download-from-cloud.ts \
-  --name "WOW2026 W19" --output-dir "outputs/2026-MM-DD-theme-name"
+  --name "2026W40" --output-dir "outputs/2026-MM-DD-theme-name"
 # または
 npx tsx .claude/skills/analyze-twbx/scripts/cloud/download-from-cloud.ts \
   --id <workbook-id> --output-dir "outputs/2026-MM-DD-theme-name"
