@@ -41,7 +41,7 @@ WOW の解答は人間が作り直すもの。動くだけでなく、熟練の 
 ### Step 1: 前提確認
 - `outputs/{theme}/requirements-en.md` を読む
 - `outputs/{theme}/prototype/*.html` があれば参照（Vizイメージの認識合わせ）
-- 出題で **Sample-Superstore以外のデータが必要か** を確認（データソース置換は未対応。[制約・対象外](#制約対象外) 参照）
+- 要件が指定するデータと期間を確認する。テンプレの抽出は古い時点のデータなので、通常は `common/` の Excel に差し替える（Step 4）。列の構成がテンプレと違うデータは対象外（[制約・対象外](#制約対象外) 参照）
 
 ### Step 2: スキーマ更新確認（任意）
 新Tableau機能を試したい時など、最新XSDが必要そうなら:
@@ -78,8 +78,9 @@ npx tsx $SKILL/scripts/apply-edits.ts --patch "$PATCH"
 続けて `refine/wb-build/*.twb` を直接編集する:
 
 1. テンプレの残り物を消す。`<worksheet name='Sheet 1'>`、`<dashboard name='Goal'>`（過去の出題の画像を載せたもの）と、それぞれの `<window>` を削除する
-2. パラメータが要るなら `Parameters` データソースを足す。Pivot が要るなら relation を書き換える（どちらも現行テンプレには無い。書き方は cheatsheet と pitfalls）
-3. シート、ダッシュボード、`<window>` を書く。XML 内で計算フィールドを指すときは、キャプションではなく `calcIdMap` の内部名（`[Calculation_001]`）を使う
+2. データソースを出題のデータに差し替える（[references/twb-pitfalls.md](references/twb-pitfalls.md) の「データソースの差し替え」）。Pivot が要るなら、その後で relation を書き換える（同「データソースの Pivot」）
+3. パラメータが要るなら `Parameters` データソースを足す（現行テンプレには無い。書き方は cheatsheet の「パラメータ」）
+4. シート、ダッシュボード、`<window>` を書く。XML 内で計算フィールドを指すときは、キャプションではなく `calcIdMap` の内部名（`[Calculation_001]`）を使う
 
 編集したら検証して `.twbx` にまとめる:
 
@@ -214,7 +215,7 @@ pip install -r vendor/tableau-plugin/scripts/requirements.txt   # XSD検証用�
 ## 制約・対象外
 
 - **対象外**: Sankey, Radial, Hex Tile, Map, Web Data Connector
-- データソース置換は未対応（パッチの `dataSourceSwap` は未実装）。データソースはテンプレの Sample-Superstore を使う
+- データの差し替えは、列の構成がテンプレと同じ Excel（`common/Sample - Superstore.xlsx`）に限る。列の構成が違うデータは未対応
 - パラメータはパッチで表せない。TWB の直接編集で足す（[references/twb-skeleton-cheatsheet.md](references/twb-skeleton-cheatsheet.md) の「パラメータ」）
 - XSD検証は 2025.1 より古い `source-build` のブックを検証できない
 - Tableau Desktop自動検証CLIは存在しない。描画の自動確認は Cloud 経由（Step 5）で行い、Desktop での最終確認は手動（Step 6）

@@ -18,6 +18,7 @@ note: create-workbook で rawXml・後処理スクリプトを使って TWB を�
 - マークとシェルフ
 - テキスト（formatted-text）
 - ダッシュボード
+- データソースの差し替え（同梱 Excel への直接接続）
 - データソースの Pivot
 - 計算フィールドの整理（フォルダ）
 
@@ -118,6 +119,25 @@ note: create-workbook で rawXml・後処理スクリプトを使って TWB を�
 - 縦の流れコンテナで、表のシート（KPI のテキスト表）の近くに新しいテキストゾーンを足したら、その表が `#####` になり、ゾーンの大きさを変えても直らなかったことがある。凡例などの短い文は、新しいゾーンにせず、既存のテキストゾーン（段の見出しなど）の行として足す。
 - 複数のゾーンを 1 枚の色の面（パネル）に載せるには、コンテナとその子ゾーンの `zone-style` に `background-color` を書き、中のシートの `<style-rule element='table'>` にも同じ `background-color` を書く。シート側に書かないと、シートの白が面の上に塗られる。
 - パラメータ操作は `<zone type-v2='paramctrl' param='[Parameters].[Parameter 1]' mode='type_in' .../>` で置ける。
+
+## データソースの差し替え（同梱 Excel への直接接続）
+
+テンプレのデータソースは hyper 抽出を持ち、元の Excel への接続は作者のマシンのパスを指している。抽出の中身は抽出した時点のデータで、要件が指定する期間を含まないことがある。出題のデータを使うときは、Excel を `.twbx` に同梱し、抽出を外して直接接続にする。
+
+1. 出題のデータ（`common/Sample - Superstore.xlsx`）を `refine/wb-build/Data/Superstore/` にコピーする。
+2. `<named-connection>` の中の `<connection class='excel-direct'>` の `filename` を、`wb-build` からの相対パスに書き換える。
+3. `<datasource>` の中の `<extract …>` から `</extract>` までを丸ごと削除する（`<folders-common>` の後、`<layout>` の前にある）。
+4. `refine/wb-build/Data/Downloads/` の hyper ファイルを取り除く。
+
+```xml
+<named-connection caption='Sample - Superstore' name='excel-direct.xxxx'>
+  <connection class='excel-direct' cleaning='no' compat='no' dataRefreshTime=''
+      filename='Data/Superstore/Sample - Superstore.xlsx' interpretationMode='0' password='' server='' validate='no' />
+</named-connection>
+```
+
+- 差し替えられるのは、シート名（`Orders`）と列の構成がテンプレと同じ Excel だけ。`<relation table='[Orders$]'>` と `<columns>`、`<metadata-records>` はそのまま使う。列の構成が違うデータへの差し替えは対象外。
+- Pivot（次節）は、この直接接続にしてから行う。
 
 ## データソースの Pivot
 

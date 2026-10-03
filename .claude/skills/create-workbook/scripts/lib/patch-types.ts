@@ -4,15 +4,9 @@ export interface WorkbookPatch {
   baseTemplate: string;
   outputPath: string;
   workingDir?: string;
-  dataSourceSwap?: DataSourceSwap | null;
   calculatedFields?: CalculatedFieldSpec[];
   worksheets?: WorksheetSpec[];
   dashboards?: DashboardSpec[];
-}
-
-export interface DataSourceSwap {
-  from: string;
-  to: string;
 }
 
 export interface CalculatedFieldSpec {
