@@ -60,7 +60,7 @@ npx tsx .claude/skills/create-workbook/scripts/check-schema-updates.ts
 24時間キャッシュあり。更新があればリリースノートを表示し、ユーザー判断で `update-schemas.ts` 実行。
 
 ### Step 3: パッチJSONの起案
-要件から計算フィールドの一覧を抽出し、`outputs/{theme}/tmp/workbook-patch.json` に書き出す（フォーマットは [パッチJSON仕様](#パッチJSON仕様) 参照）。
+要件から計算フィールドの一覧を抽出し、`outputs/{theme}/tmp/workbook-patch.json` に書き出す（書式は [references/patch-json.md](references/patch-json.md)）。
 
 起案前に [references/twb-pitfalls.md](references/twb-pitfalls.md) を読み、文字列の引用符・数値書式・計算フィールドのフォルダ分けを規範どおりにする。式の中で別の計算フィールドを指すときは、キャプションではなく内部名で書く。内部名はパッチの並び順に `[Calculation_001]` から振られるので、参照される側を先に並べ、順番から内部名を決める。パラメータは `[Parameters].[Parameter 1]` の形で指す。
 
@@ -85,7 +85,7 @@ npx tsx $SKILL/scripts/apply-edits.ts --patch "$PATCH"
 続けて `refine/wb-build/*.twb` を直接編集する:
 
 1. テンプレの残り物を消す。`<worksheet name='Sheet 1'>`、`<dashboard name='Goal'>`（過去の出題の画像を載せたもの）と、それぞれの `<window>` を削除する
-2. データソースを出題のデータに差し替える（[references/twb-pitfalls.md](references/twb-pitfalls.md) の「データソースの差し替え」）。Pivot が要るなら、その後で relation を書き換える（同「データソースの Pivot」）
+2. データソースを出題のデータに差し替える。Pivot が要るなら、その後で relation を書き換える。どちらも [references/datasource-swap.md](references/datasource-swap.md) の手順に従う
 3. パラメータが要るなら `Parameters` データソースを足す（現行テンプレには無い。書き方は cheatsheet の「パラメータ」）
 4. シート、ダッシュボード、`<window>` を書く。XML 内で計算フィールドを指すときは、キャプションではなく `calcIdMap` の内部名（`[Calculation_001]`）を使う
 
@@ -113,20 +113,9 @@ XSD検証の結果は「構造が正しい」までで、Desktop で開けるこ
 
 Desktop は開いているワークブックを XML から再読込できないので、表示の試行錯誤は Cloud を描画エンジンにして回す。作業は `outputs/{theme}/refine/`（gitignore 済み）で行う。Cloud 認証は publish-to-cloud Skill の前提に従う。
 
-```
-outputs/{theme}/
-  prototype/*.html        ドラフト HTML（create-requirements が作る。gitignore 済み）
-  refine/
-    YYYYWNN.twbx          作業用かつ publish 対象。テーマ直下には .twbx を置かない
-    refine.html           refine 中に改訂するドラフト HTML。1 ファイルを上書きで育てる（prototype/ があればコピーして始め、無ければ新規に作る）
-    wb-build/             編集中の TWB（初回に .twbx から展開）
-    compare.html          比較ページ（assets/compare.html のコピー。ファイルのまま開く）
-    compare-data.js       比較ページが読むドラフト一覧と描画の一覧（iterate.ts が毎回書き直す）
-    render/*.png          Cloud の描画
-    publish-result.json   publish 結果
-    backup/               上書き前の Cloud 版
-    HANDOFF.md            合意した変更の経緯（ドラフトのメモ欄から移す）
-```
+ループを始める前に [references/refine-loop.md](references/refine-loop.md) を読む。作業フォルダの構成、ユーザーが見る比較ページ、ドラフト HTML の運用、描画の読み方がある。
+
+見せ方の変更（レイアウト・文言・情報の削減）は、TWB より先にドラフト HTML（`refine/refine.html`）で合意する。機械的な修正（高さ不足の `#####`、空白の追加）は、HTML を挟まず TWB を直す。
 
 1 ラウンドは次の 1 コマンドで回す:
 
@@ -138,39 +127,16 @@ npx tsx $SKILL/scripts/iterate.ts --twbx "$THEME_DIR/refine/2026W40.twbx" [--vie
 
 `iterate.ts` は `wb-build/` があればそれを正とし、毎回そこから `.twbx` を作り直す。`wb-build/` が無いときだけ `.twbx` を展開する。手作業で作った `.twbx` や Cloud から取得した版から始めるときは、それを `refine/YYYYWNN.twbx` に置き、古い `wb-build/` はユーザーに消してもらってから実行する。
 
-比較ページ `refine/compare.html` は、ユーザーがブラウザでファイルのまま開いて見る（サーバー不要）。左にドラフト HTML（`refine/` と `prototype/` の両方から選べる）、右に Cloud の描画 PNG が並ぶ。
-
-- 初回は、比較ページを開くコマンドをチャットに出す（出し方はリポジトリの CLAUDE.md「ユーザーに開いてもらうもの」）。2 回目以降は、開いたままのページで「Reload both」を押してもらう
-- Claude は比較ページを読まない。描画は `render/*.png` と `render/<view>.text.tsv` を直接読む
-- 一覧は `iterate.ts` が書き出す `compare-data.js` から読む。「Reload both」はこのファイルとドラフト・PNG を読み直す
-- ドラフト HTML を足しただけで publish しないときは、`iterate.ts --twbx ... --compare-only` で一覧だけ更新する
-
-見せ方の変更（レイアウト・文言・情報の削減）は、TWB より先にドラフト HTML で合意する。HTML は数秒で直せ、publish の待ちがない。`prototype/` の原案は要件段階の記録として残し、改訂は `refine/refine.html` を上書きする。版番号は付けない。HTML では Tableau で再現できる表現だけを使う。高さ不足の `#####` や空白の追加のような機械的な修正は、HTML を挟まず TWB を直す。
-
-ドラフトの横のメモ欄には、いま議論している論点だけを置く（案の切り替え、決めてほしいこと、Tableau での実装の見込み）。合意した変更はドラフト本体に反映してメモから消し、経緯は `refine/HANDOFF.md` に残す。変更点を積み上げると、どこを見てほしいのかが埋もれる。
-
 ループの回し方:
 
 1. `refine/wb-build/*.twb` を直接編集する
 2. `iterate.ts` を実行する
-3. 描画を読み（読み方は下の表）、要件・ドラフト HTML と比べて差分を列挙する。観点は「空白ゾーン」「期待値との一致」「色・線・折り返し」「`#####` 表示」
+3. 描画を読み（PNG か文字の表か。選び方は refine-loop.md の「描画の読み方」）、要件・ドラフト HTML と比べて差分を列挙する。観点は「空白ゾーン」「期待値との一致」「色・線・折り返し」「`#####` 表示」
 4. 差分があれば 1 に戻る。空白シートや `#####` の原因は [references/twb-pitfalls.md](references/twb-pitfalls.md) で当たる
 
 PNG は静止画なので、ツールヒント・パラメータ・ハイライト動作はユーザーに確かめてもらう。`publish-result.json` の `webpageUrl` をチャットに出し、確かめる操作を 1 行で添える。
 
-描画は、確かめたい内容に合う形で読む。PNG を毎回全体で読む必要はない。
-
-| 確かめたいこと | 読むもの | 取り方 |
-|---|---|---|
-| レイアウト・余白・重なり・全体の印象 | ダッシュボードの PNG | `--views "<ダッシュボード名>"` |
-| 直したシートの見た目 | そのシートの PNG | `--views "<シート名>"`。シートは単体の大きさで描かれるので、配置はダッシュボードで見る |
-| 文字の色・サイズ・太さ・文言（書式が指定どおりか、色が何種類あるか） | `render/<view>.text.tsv` | `--text-table` を付ける。PNG より少ないトークンで、色コードとピクセル値が正確に出る |
-
-文字の表は、書式を確かめる必要があるときだけ取る。表に出ない配置や見た目は PNG で見る。
-
 refine ループの間はワークシートを非表示にしない。非表示のシートはビューとして publish されず、`--views` で個別に描画できない。非表示にするのは Tableau Public に出す版だけ（Step 6）。
-
-Cloud 側の画像キャッシュで前回の絵が返ることがある（1 分未満の連続 publish）。変化が見えないときは 1 分待って `iterate.ts` を再実行する。
 
 描画がドラフトと一致したら、ループを抜ける前に次の 2 つを済ませる。ここで TWB を直したら、ループの 1 に戻る。
 
@@ -201,41 +167,14 @@ Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認
 - Tableau Public に出す版では、ダッシュボードに載せたワークシートを非表示にする。XML ではそのシートの `<window class='worksheet'>` に `hidden='true'` を付ける（Desktop ではダッシュボードのタブの右クリックから「すべてのシートを非表示」）
 - 問題なければ Step 5 の最後の publish が公開版になる。`refine/publish-result.json` の `webpageUrl` を次の `create-x-post` が読む
 
-## パッチJSON仕様
-
-```json
-{
-  "baseTemplate": "common/WOW Challenge Template (Save a copy) .twbx",
-  "outputPath": "outputs/{theme}/refine/2026W40.twbx",
-  "workingDir": "outputs/{theme}/refine/wb-build",
-  "calculatedFields": [
-    {
-      "caption": "Profit Ratio",
-      "datatype": "real",
-      "role": "measure",
-      "type": "quantitative",
-      "formula": "SUM([Profit])/SUM([Sales])",
-      "defaultFormat": "*+0.0%;-0.0%;0.0%",
-      "folder": "2_Stats"
-    }
-  ]
-}
-```
-
-- `calculatedFields[].formula` には改行と `//` コメントを書いてよい（TWB では `&#13;&#10;` に変換される）
-- `calculatedFields[].folder` を指定すると、データペインのそのフォルダに入る（`<folders-common>` に追記。同名フォルダがあれば合流）。フォルダの切り方は [references/twb-pitfalls.md](references/twb-pitfalls.md) の「計算フィールドの整理」に従う
-- `calculatedFields[].defaultFormat` は既定の数値書式（省略可）。動作確認済みの書式は twb-pitfalls.md の「数値書式」
-- `calculatedFields[].datasource` は省略する。省略すると、テンプレの主データソース（`Parameters` 以外で最初のもの）に入る
-- 内部名は `[Calculation_001]` からパッチの並び順に振られる。式の中の計算フィールド参照はこの内部名で書く（`apply-edits.ts` はキャプションを内部名に置き換えない）
-- `worksheets[]`（`name` と `rawXml`）と `dashboards[]`（`name`・`size`・`sheets`）も書けるが、ダッシュボードは全シートを縦に等分するだけになる。通常は使わず、直接編集で書く
-- `outputPath` は `outputs/{theme}/refine/YYYYWNN.twbx`（WOW の週番号を 2 桁ゼロ埋め）。Cloud 上のワークブック名はこのファイル名から決まる
-- `workingDir` を省略すると `refine/wb-build` を使う（`iterate.ts` と同じ場所）
-
 ## 参照ファイル
 
 - [references/twb-skeleton-cheatsheet.md](references/twb-skeleton-cheatsheet.md) — TWB XML骨格チートシート
 - [references/calc-field-patterns.md](references/calc-field-patterns.md) — 計算フィールド/LOD/パラメータの実例XML
 - [references/twb-pitfalls.md](references/twb-pitfalls.md) — XSDを通ってもDesktopで失敗・表示崩れする原因と回避規範（引用符・書式・色・線・テキスト・レイアウト・フォルダ分け）
+- [references/datasource-swap.md](references/datasource-swap.md) — データソースを同梱 Excel への直接接続に差し替える手順と、Pivot の手順（Step 4）
+- [references/patch-json.md](references/patch-json.md) — パッチ JSON の書式（Step 3）
+- [references/refine-loop.md](references/refine-loop.md) — refine ループの作業フォルダ・比較ページ・ドラフト HTML の運用・描画の読み方（Step 5）
 - [references/dashboard-design.md](references/dashboard-design.md) — 色（明るさの 3 段、色は意味にだけ）・見せ場・線の強弱・出題の既定値の選び方と、案を HTML で比べて決める進め方
 - [references/viz-techniques.md](references/viz-techniques.md) — 少ない手順で見た目が良くなる定石（`MIN(1.0)` タイル、二重軸の強調点、別メジャーの参照帯、ラベル設定など）と実証済みの XML
 - `references/schemas/` — Tableau公式XSDの最新スナップショットを置く手元キャッシュ（gitignore対象。新機能の構文を読むときに `update-schemas.ts` で取得）
