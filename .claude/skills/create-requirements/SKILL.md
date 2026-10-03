@@ -29,7 +29,9 @@ description: WOW出題の要件文(英語+日本語+HTML埋め込み版)を作�
 
 Vizのレイアウト・線の本数・色分け・BAN配置などを事前に視覚化したい場合に作る。
 
-- 出題フォルダに `prototype.html` として保存
+- 出題フォルダの `prototype/` に保存する（例: `prototype/prototype.html`。案が複数なら `prototype-weekly.html` のように並べる）
+- `prototype/` は gitignore 済みで Git には入らない。後工程の比較ページ（create-workbook の refine ループ）がこのフォルダの HTML を一覧する
+- ファイル単体で開けるよう、先頭に `<meta charset="utf-8">` を置く
 - Chart.js / vanilla HTML / SVG など軽量な手段で実装
 - 参考: `outputs/2026-03-25-viz-extensions-dashboard/prototype.html`
 - 「プロトを作って」「イメージを見たい」とユーザーから言われた時、または要件確定前に認識合わせが必要そうな場合に提案
@@ -40,7 +42,7 @@ Vizのレイアウト・線の本数・色分け・BAN配置などを事前に�
 |---|---|
 | `outputs/{theme}/requirements-ja.md` | 日本語版（先に作成） |
 | `outputs/{theme}/requirements-en.md` | 英語版 + 末尾にHTMLコメント埋め込み |
-| `outputs/{theme}/prototype.html` | 任意。Vizイメージの事前可視化 |
+| `outputs/{theme}/prototype/*.html` | 任意。Vizイメージの事前可視化（Git 追跡外） |
 
 これらは後続の `create-workbook` および `create-x-post` の入力になる。
 

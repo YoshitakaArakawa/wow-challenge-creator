@@ -5,7 +5,7 @@ description: 要件文を元にTableauワークブック(.twbx)を生成する�
 
 # Tableauワークブック生成スキル
 
-要件文（`requirements-en.md`）とプロトタイプ（任意 `prototype.html`）を入力に、`common/WOW Challenge Template (Save a copy) .twbx` をベースに差分編集で `.twbx` を生成する。
+要件文（`requirements-en.md`）とプロトタイプ（任意 `prototype/*.html`）を入力に、`common/WOW Challenge Template (Save a copy) .twbx` をベースに差分編集で `.twbx` を生成する。
 
 ## 設計の原則
 
@@ -34,7 +34,7 @@ WOW の解答は人間が作り直すもの。動くだけでなく、熟練の 
 
 ### Step 1: 前提確認
 - `outputs/{theme}/requirements-en.md` を読む
-- `outputs/{theme}/prototype.html` があれば参照（Vizイメージの認識合わせ）
+- `outputs/{theme}/prototype/*.html` があれば参照（Vizイメージの認識合わせ）
 - 出題で **Sample-Superstore以外のデータが必要か** を確認（Phase 2: `python/swap_datasource.py`）
 
 ### Step 2: スキーマ更新確認（任意）
@@ -74,7 +74,7 @@ npx tsx $SKILL/scripts/apply-edits.ts --patch "$PATCH"
 npx tsx $SKILL/scripts/validate-twb.ts --patch "$PATCH"
 
 # 3b. XSD検証 (source-build に合う版の公式XSDを自動選択。要 lxml)
-python $SKILL/scripts/vendor/tableau-plugin/scripts/validate_workbook.py "$THEME_DIR/tmp/wb-build/<name>.twb"
+python $SKILL/scripts/vendor/tableau-plugin/scripts/validate_workbook.py "$THEME_DIR/refine/wb-build/<name>.twb"
 
 # 4. TWBX (ZIP) に再パッケージ
 npx tsx $SKILL/scripts/repack-twbx.ts --patch "$PATCH"
@@ -88,24 +88,47 @@ XSD検証の結果は「構造が正しい」までで、Desktop で開けるこ
 - 逆に XSD が要求しても Desktop が拒否する要素がある（例: 手動ソートは `<manual-sort>` ではなく `<sort class='manual'>`）。Desktop で開けるならその XSD エラーは無視する。既知の食い違いは [references/twb-pitfalls.md](references/twb-pitfalls.md) にある
 - 構文が分からない要素は推測で書かず、Desktop で同じ操作をして `.twb` に別名保存し、その XML を写す
 
-### Step 5: Cloud 描画ループで表示を詰める
+### Step 5: refine ループで表示を詰める
 
-Desktop は開いているワークブックを XML から再読込できないので、表示の試行錯誤は Cloud を描画エンジンにして回す。`.env` に Cloud の PAT が要る（publish-to-cloud Skill の前提）。
+Desktop は開いているワークブックを XML から再読込できないので、表示の試行錯誤は Cloud を描画エンジンにして回す。作業は `outputs/{theme}/refine/`（gitignore 済み）で行う。Cloud 認証は publish-to-cloud Skill の前提に従う。
 
-```bash
-npx tsx $SKILL/scripts/iterate.ts --patch "$PATCH" [--views "Dashboard"]
+```
+outputs/{theme}/
+  prototype/*.html        ドラフト HTML（create-requirements が作る。gitignore 済み）
+  refine/
+    YYYYWNN.twbx          作業用かつ publish 対象。テーマ直下には .twbx を置かない
+    wb-build/             編集中の TWB（初回に .twbx から展開）
+    compare.html          比較ページ（初回に assets/compare.html からコピー）
+    render/*.png          Cloud の描画
+    publish-result.json   publish 結果
+    backup/               上書き前の Cloud 版
 ```
 
-`iterate.ts` は `validate-twb.ts` → `repack-twbx.ts` → `publish.py --overwrite --render` を順に実行し、各ビューの PNG を `outputs/{theme}/tmp/render/` に落として結果 JSON を出す。XSD 検証は含まないので、Step 4 の 3b を通した後に始める。
+1 ラウンドは次の 1 コマンドで回す:
+
+```bash
+npx tsx $SKILL/scripts/iterate.ts --twbx "$THEME_DIR/refine/2026W40.twbx" [--views "Dashboard"] [--patch "$PATCH"]
+```
+
+`iterate.ts` は、TWB の整形式チェック → `.twbx` への再梱包 → `publish.py --overwrite --render` を順に行う。`--patch` を付けると `validate-twb.ts` のフィールド参照チェックも走る。XSD 検証は含まないので、Step 4 の 3b を通した後に始める。手作業で作った `.twbx` から始めるときは、それを `refine/YYYYWNN.twbx` に置けばよい。
+
+比較ページは、テーマフォルダをローカル配信して開く:
+
+```bash
+python $SKILL/scripts/serve-refine.py "$THEME_DIR"   # バックグラウンドで起動
+# → http://127.0.0.1:8790/refine/compare.html
+```
+
+左にドラフト HTML、右に Cloud の描画 PNG が並ぶ。「Reload both」で最新の publish を読み直す。ユーザーと画面を見ながら進めるときは、このページを Chrome で開いて共有する。
 
 ループの回し方:
 
-1. `tmp/wb-build/*.twb` を直接編集するか、パッチ JSON を直して `apply-edits.ts` を再実行する
+1. `refine/wb-build/*.twb` を直接編集する（生成からやり直すならパッチ JSON を直して Step 4 を再実行する）
 2. `iterate.ts` を実行する
-3. `renders[].png` を Read し、要件・`prototype.html` と比べて差分を列挙する。観点は「空白ゾーン」「期待値との一致」「色・線・折り返し」「`#####` 表示」
+3. `renders[].png` を Read し、要件・ドラフト HTML と比べて差分を列挙する。観点は「空白ゾーン」「期待値との一致」「色・線・折り返し」「`#####` 表示」
 4. 差分があれば 1 に戻る。空白シートや `#####` の原因は [references/twb-pitfalls.md](references/twb-pitfalls.md) で当たる
 
-PNG は静止画なので、ツールヒント・パラメータ・ハイライト動作は `webpageUrl` をブラウザで開いて確かめる。ブラウザや Desktop の画面操作はサブエージェント（Computer Use）に委ね、1 回の委任は「どのビューの何を見るか」1 件に絞る。
+PNG は静止画なので、ツールヒント・パラメータ・ハイライト動作は `webpageUrl` をブラウザで開いて確かめる。
 
 Cloud 側の画像キャッシュで前回の絵が返ることがある（1 分未満の連続 publish）。変化が見えないときは 1 分待って `iterate.ts` を再実行する。
 
@@ -114,15 +137,15 @@ Cloud 側の画像キャッシュで前回の絵が返ることがある（1 分
 Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認する。Cloud では通るが Desktop が拒否する属性があるため、この確認は省かない。
 
 - 開き直しはユーザーに頼む（Desktop で開いている版は再生成しても更新されない。保存せずに閉じてから開き直す）
-- 問題なければ Step 5 の最後の publish が公開版になる。`tmp/publish-result.json` の `webpageUrl` を次の `create-x-post` が読む
+- 問題なければ Step 5 の最後の publish が公開版になる。`refine/publish-result.json` の `webpageUrl` を次の `create-x-post` が読む
 
 ## パッチJSON仕様
 
 ```json
 {
   "baseTemplate": "common/WOW Challenge Template (Save a copy) .twbx",
-  "outputPath": "outputs/{theme}/2026W40.twbx",
-  "workingDir": "outputs/{theme}/tmp/wb-build",
+  "outputPath": "outputs/{theme}/refine/2026W40.twbx",
+  "workingDir": "outputs/{theme}/refine/wb-build",
   "dataSourceSwap": null,
   "parameters": [
     {
@@ -177,8 +200,8 @@ Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認
 - `dataSourceSwap` は Phase 2 で使用、Phase 1 は `null` 固定
 - `calculatedFields[].formula` には改行と `//` コメントを書いてよい（TWB では `&#13;&#10;` に変換される）
 - `calculatedFields[].folder` を指定すると、データペインのそのフォルダに入る（`<folders-common>` に追記。同名フォルダがあれば合流）。フォルダの切り方は [references/twb-pitfalls.md](references/twb-pitfalls.md) の「計算フィールドの整理」に従う
-- `workingDir` を省略すると `outputPath` のディレクトリ + `tmp/wb-build` を自動使用
-- `outputPath` のファイル名は `YYYYWNN.twbx`（WOW の週番号を 2 桁ゼロ埋め）。Cloud 上のワークブック名はこのファイル名から決まる
+- `outputPath` は `outputs/{theme}/refine/YYYYWNN.twbx`（WOW の週番号を 2 桁ゼロ埋め）。Cloud 上のワークブック名はこのファイル名から決まる
+- `workingDir` を省略すると `refine/wb-build` を使う（`iterate.ts` と同じ場所）
 
 ## 参照ファイル
 
@@ -187,6 +210,7 @@ Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認
 - [references/twb-pitfalls.md](references/twb-pitfalls.md) — XSDを通ってもDesktopで失敗・表示崩れする原因と回避規範（引用符・書式・色・線・テキスト・レイアウト・フォルダ分け）
 - [references/chart-recipes/](references/chart-recipes/) — チャート種別ごとのレシピXML（プレースホルダ `{{NAME}}` 形式）
 - `references/schemas/` — Tableau公式XSDの最新スナップショットを置く手元キャッシュ（gitignore対象。新機能の構文を読むときに `update-schemas.ts` で取得）
+- [assets/compare.html](assets/compare.html) — refine ループの比較ページのひな形（`iterate.ts` が `refine/` にコピーする）
 - [scripts/vendor/tableau-plugin/](scripts/vendor/tableau-plugin/) — `tableau/tableau-plugin` から取り込んだXSD検証スクリプト・版別XSD（2025.1〜2026.2）・構文例JSON（Apache-2.0。出典は `SOURCE.md`）
 
 ## 初回セットアップ

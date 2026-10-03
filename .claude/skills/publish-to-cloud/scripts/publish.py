@@ -17,6 +17,8 @@ import tableauserverclient as TSC
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from tableau_auth import REPO_ROOT, signed_in_server  # noqa: E402  (loads .env, OAuth or PAT)
 
+# Every artifact of the publish/refine loop lives in <theme>/refine/ (gitignored).
+REFINE_DIR_NAME = "refine"
 RETRY_BASE_SECONDS = 2
 MAX_RETRIES = 3
 # Cloud caches rendered images; 1 minute is the smallest maxAge the REST API accepts,
@@ -30,14 +32,18 @@ RENDER_READY_WAIT_SECONDS = 3
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Publish a workbook to Tableau Cloud.")
     p.add_argument("--twbx", required=True, help="Path to the .twbx file (absolute or relative to repo root).")
-    p.add_argument("--output-dir", required=True, help="Theme folder; tmp/publish-result.json and backup/ live here.")
+    p.add_argument(
+        "--output-dir",
+        required=True,
+        help="Theme folder (outputs/{theme}); refine/publish-result.json, refine/render/ and refine/backup/ are written under it.",
+    )
     p.add_argument("--overwrite", action="store_true", help="Overwrite existing workbook of the same name.")
     p.add_argument("--project", default=None, help="Project name. Defaults to TABLEAU_PROJECT_NAME env.")
     p.add_argument("--name", default=None, help="Workbook display name. Defaults to file stem.")
     p.add_argument(
         "--render",
         action="store_true",
-        help="After publishing, download a PNG of every view into <output-dir>/tmp/render/ (High resolution).",
+        help="After publishing, download a PNG of every view into <output-dir>/refine/render/ (High resolution).",
     )
     p.add_argument(
         "--views",
@@ -71,7 +77,7 @@ def find_workbook_by_name(server: TSC.Server, name: str, project_id: str) -> Opt
 
 
 def backup_existing(server: TSC.Server, existing: TSC.WorkbookItem, output_dir: Path) -> Path:
-    backup_dir = output_dir / "backup"
+    backup_dir = output_dir / REFINE_DIR_NAME / "backup"
     backup_dir.mkdir(parents=True, exist_ok=True)
     # TSC names the file itself (<workbook name>.twbx) when given a directory.
     saved = server.workbooks.download(existing.id, filepath=str(backup_dir), include_extract=True)
@@ -84,7 +90,7 @@ def safe_file_name(name: str) -> str:
 
 def render_views(server: TSC.Server, workbook_id: str, output_dir: Path, only: Optional[set]) -> list:
     """Download a PNG per view. Returns [{viewName, viewId, filePath}] for the views rendered."""
-    render_dir = output_dir / "tmp" / "render"
+    render_dir = output_dir / REFINE_DIR_NAME / "render"
     render_dir.mkdir(parents=True, exist_ok=True)
     for stale in render_dir.glob("*.png"):
         stale.unlink()
@@ -124,9 +130,9 @@ def render_views(server: TSC.Server, workbook_id: str, output_dir: Path, only: O
 
 
 def write_result(output_dir: Path, payload: dict) -> Path:
-    tmp = output_dir / "tmp"
-    tmp.mkdir(parents=True, exist_ok=True)
-    out = tmp / "publish-result.json"
+    refine = output_dir / REFINE_DIR_NAME
+    refine.mkdir(parents=True, exist_ok=True)
+    out = refine / "publish-result.json"
     out.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return out
 

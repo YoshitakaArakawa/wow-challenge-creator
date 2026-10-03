@@ -46,22 +46,22 @@ pip install -r requirements.txt
 
 ```bash
 python .claude/skills/publish-to-cloud/scripts/publish.py \
-  --twbx "outputs/{theme}/2026W40.twbx" \
+  --twbx "outputs/{theme}/refine/2026W40.twbx" \
   --output-dir "outputs/{theme}" --render
 ```
 
 引数:
 - `--twbx <path>` — アップロードする .twbx の絶対パスまたは相対パス（必須）
-- `--output-dir <path>` — `tmp/publish-result.json` と `backup/` を置く出題フォルダ（必須）
+- `--output-dir <path>` — 出題フォルダ `outputs/{theme}`（必須）。結果はすべてその下の `refine/` に書く
 - `--overwrite` — 同名ワークブックがあれば上書き（デフォルトは新規作成）
 - `--project "<projectName>"` — 投稿先プロジェクト名（省略時は `.env` の `TABLEAU_PROJECT_NAME`）
 - `--name "<workbookName>"` — Cloud上での表示名（省略時は .twbx のファイル名から拡張子を除いたもの）
-- `--render` — publish 後に全ビューを High 解像度 PNG で `outputs/{theme}/tmp/render/<view>.png` に保存（前回の PNG は消す）
+- `--render` — publish 後に全ビューを High 解像度 PNG で `outputs/{theme}/refine/render/<view>.png` に保存（前回の PNG は消す）
 - `--views "A,B"` — `--render` の対象ビューを名前で絞る（省略時は全ビュー。ダッシュボードだけ見たいときに使う）
 
 ### Step 2: 結果確認
 
-成功すると `outputs/{theme}/tmp/publish-result.json` に次の形式で書き出される:
+成功すると `outputs/{theme}/refine/publish-result.json` に次の形式で書き出される:
 
 ```json
 {
@@ -73,7 +73,7 @@ python .claude/skills/publish-to-cloud/scripts/publish.py \
   "createdAt": "2026-10-01T...Z",
   "overwrote": false,
   "renders": [
-    {"viewName": "Dashboard", "viewId": "...", "filePath": "outputs/{theme}/tmp/render/Dashboard.png"}
+    {"viewName": "Dashboard", "viewId": "...", "filePath": "outputs/{theme}/refine/render/Dashboard.png"}
   ]
 }
 ```
@@ -84,9 +84,9 @@ python .claude/skills/publish-to-cloud/scripts/publish.py \
 
 Tableau Desktop は開いているワークブックを XML から再読込できない。TWB を直接編集しながら表示を追うときは Cloud を描画エンジンとして使う。
 
-1. `outputs/{theme}/tmp/wb-build/*.twb` を編集する
+1. `outputs/{theme}/refine/wb-build/*.twb` を編集する
 2. `create-workbook` の `iterate.ts` を実行する（検証 → repack → `publish.py --overwrite --render` を 1 コマンドで行う。手順は create-workbook Skill の Step 5）
-3. `tmp/render/*.png` を Read し、要件・プロトタイプと比べて差分を挙げる
+3. `refine/render/*.png` を Read し、要件・プロトタイプと比べて差分を挙げる（比較ページの使い方も create-workbook Skill の Step 5）
 4. 差分があれば 1 へ戻る
 
 PNG で判断できるのはレイアウト・色・数値・空白ゾーン。ツールヒント・パラメータ操作・ハイライト動作は `webpageUrl` をブラウザで開いて確かめる。ブラウザ操作はサブエージェントに委ね、確認観点を 1 行で渡す。
@@ -95,9 +95,9 @@ PNG で判断できるのはレイアウト・色・数値・空白ゾーン。�
 
 ## 安全策
 
-- **事前バックアップ**: `--overwrite` 指定時、既存ワークブックを `outputs/{theme}/backup/<workbookName>.twbx` にダウンロードしてから上書き。
+- **事前バックアップ**: `--overwrite` 指定時、既存ワークブックを `outputs/{theme}/refine/backup/<workbookName>.twbx` にダウンロードしてから上書き。
 - **リトライ**: ネットワーク／一時的サーバーエラーで最大3回まで指数バックオフ（2s, 4s, 8s）。
-- **エラー時**: バックアップは残し、`tmp/publish-result.json` に `ok: false` とエラー詳細を書き出す。
+- **エラー時**: バックアップは残し、`refine/publish-result.json` に `ok: false` とエラー詳細を書き出す。
 
 ## ロールバック
 
@@ -105,7 +105,7 @@ PNG で判断できるのはレイアウト・色・数値・空白ゾーン。�
 
 ```bash
 python .claude/skills/publish-to-cloud/scripts/publish.py \
-  --twbx "outputs/{theme}/backup/{workbookName}.twbx" \
+  --twbx "outputs/{theme}/refine/backup/{workbookName}.twbx" \
   --output-dir "outputs/{theme}" --overwrite
 ```
 

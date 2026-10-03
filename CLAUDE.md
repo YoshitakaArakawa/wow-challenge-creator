@@ -25,6 +25,14 @@ Workout Wednesday (WOW) Tableau出題を作成するための支援環境。
 
 `outputs/YYYY-MM-DD-テーマ名/` に出題用フォルダを作る（英語ケバブケース、例: `outputs/2026-02-05-sankey-drilldown/`）。テーマ未定なら仮名で作成し、確定後にリネーム。すべてのSkillはこのフォルダを共通ワークスペースとして読み書きする。
 
+テーマ直下には Markdown（discussion・要件）だけを置き、重いファイルは工程ごとのサブフォルダに分ける。どちらも gitignore 済み:
+
+| サブフォルダ | 中身 |
+|---|---|
+| `prototype/` | ドラフト HTML（create-requirements） |
+| `refine/` | 作業用 `YYYYWNN.twbx`・展開した TWB・比較ページ・Cloud 描画・publish 結果（create-workbook / publish-to-cloud） |
+| `tmp/` | その他の中間生成物・スクリプト |
+
 ## ワークフロー — Skillパイプライン
 
 WOW出題は次のパイプラインで作成する。各ステップは対応するSkillが担当し、Skill間は **出題フォルダのファイル** で連携する。
@@ -34,12 +42,12 @@ WOW出題は次のパイプラインで作成する。各ステップは対応�
 ```
 [1] brainstorm
       ↓ (discussion.md に記録、テーマ確定)
-[2] create-requirements   ← 任意で prototype.html を併産
+[2] create-requirements   ← 任意で prototype/*.html を併産
       ↓ (requirements-{ja,en}.md 確定)
 [3] create-workbook
-      ↓ (YYYYWNN.twbx 生成 → Cloud 描画ループで表示を詰める → Desktop で最終確認)
+      ↓ (refine/YYYYWNN.twbx 生成 → refine ループで表示を詰める → Desktop で最終確認)
 [4] publish-to-cloud
-      ↓ (tmp/publish-result.json に Cloud URL。[3] のループ最終回がそのまま公開版)
+      ↓ (refine/publish-result.json に Cloud URL。[3] のループ最終回がそのまま公開版)
 [5] create-x-post
       ↓ (x-post.txt)
 ```
@@ -57,18 +65,19 @@ WOW出題は次のパイプラインで作成する。各ステップは対応�
 ### ワークブック命名と投稿先
 
 - Cloud 上のワークブック名と `.twbx` ファイル名は `YYYYWNN`（例: `2026W40`）。タイトルは付けない
+- `.twbx` は `refine/` にだけ置く。テーマ直下には置かない
 - 投稿先プロジェクトは `.env` の `TABLEAU_PROJECT_NAME`（既定 `99_WorkoutWednesday`）
 
-### 描画ループ (Step 3 の内側)
+### refine ループ (Step 3 の内側)
 
 Tableau Desktop は開いているワークブックを XML から再読込できない。表示の試行錯誤は Cloud を描画エンジンにして回す:
 
 ```
-TWB 編集 → create-workbook iterate.ts (検証 → repack → publish --overwrite --render)
-→ tmp/render/*.png を Claude が読む → 差分をフィードバック → TWB 編集 …
+refine/wb-build の TWB 編集 → create-workbook iterate.ts (検証 → repack → publish --overwrite --render)
+→ refine/compare.html でドラフト HTML と Cloud 描画を並べて確認 → フィードバック → TWB 編集 …
 ```
 
-静止画で判断できない動作（ツールヒント・パラメータ・ハイライト）はブラウザで Cloud URL を開いて確かめる。画面操作はサブエージェントに委ねる。
+比較ページは `serve-refine.py` でローカル配信し、Chrome で開いてユーザーと同じ画面を見る。静止画で判断できない動作（ツールヒント・パラメータ・ハイライト）は Cloud URL を開いて確かめる。
 
 ### 協働ループ (Step 4以降)
 
@@ -85,13 +94,14 @@ publish後はユーザーがCloudで微修正することがある。次のル�
 |---|---|---|
 | `discussion.md` | brainstorm | create-requirements |
 | `requirements-{ja,en}.md` | create-requirements | create-workbook, create-x-post |
-| `prototype.html` | create-requirements (任意) | create-workbook (参考) |
+| `prototype/*.html` | create-requirements (任意) | create-workbook (参考)、refine 比較ページ |
 | `tmp/workbook-patch.json` | create-workbook | (内部) |
+| `refine/wb-build/` | create-workbook (生成・iterate.ts) | (編集対象) |
 | `tmp/cloud-pulled.twbx` | analyze-twbx (Cloud経路) | (Claude読み込み) |
-| `*.twbx` | create-workbook | publish-to-cloud |
-| `tmp/render/*.png` | publish-to-cloud (`--render`) | create-workbook (描画ループ、Claude 読み込み) |
-| `tmp/publish-result.json` | publish-to-cloud | create-x-post |
-| `backup/{wb}.twbx` | publish-to-cloud (overwrite時) | (ロールバック用) |
+| `refine/YYYYWNN.twbx` | create-workbook | publish-to-cloud |
+| `refine/render/*.png` | publish-to-cloud (`--render`) | refine 比較ページ、Claude 読み込み |
+| `refine/publish-result.json` | publish-to-cloud | create-x-post、refine 比較ページ |
+| `refine/backup/{wb}.twbx` | publish-to-cloud (overwrite時) | (ロールバック用) |
 | `x-post.txt` | create-x-post | (最終成果物) |
 
 ### 初回セットアップ（依存）

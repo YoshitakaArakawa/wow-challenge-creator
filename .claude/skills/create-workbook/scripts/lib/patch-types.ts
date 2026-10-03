@@ -56,5 +56,7 @@ export function resolveWorkingDir(patch: WorkbookPatch, repoRoot: string): strin
     return path.isAbsolute(patch.workingDir) ? patch.workingDir : path.resolve(repoRoot, patch.workingDir);
   }
   const outAbs = path.isAbsolute(patch.outputPath) ? patch.outputPath : path.resolve(repoRoot, patch.outputPath);
-  return path.join(path.dirname(outAbs), "tmp", "wb-build");
+  const outDir = path.dirname(outAbs);
+  // outputs/{theme}/refine/YYYYWNN.twbx → refine/wb-build (shared with iterate.ts); legacy layouts keep tmp/wb-build.
+  return path.basename(outDir) === "refine" ? path.join(outDir, "wb-build") : path.join(outDir, "tmp", "wb-build");
 }

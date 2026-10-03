@@ -1,21 +1,35 @@
 /**
- * One iteration of the edit → publish → look loop.
+ * One round of the refine loop: edit TWB → publish to Tableau Cloud → look at the render.
  *
- *   npx tsx iterate.ts --patch <workbook-patch.json> [--views "Dashboard,Sheet"] [--skip-validate]
+ *   npx tsx iterate.ts --twbx outputs/{theme}/refine/YYYYWNN.twbx [--views "Dashboard"] [--patch <workbook-patch.json>]
  *
- * Takes the TWB currently in the patch's workingDir (edited by hand or by apply-edits.ts),
- * validates it, repacks the .twbx, publishes it to Tableau Cloud with --overwrite --render,
- * and prints where the rendered PNGs landed so the caller can Read them.
+ * Works on outputs/{theme}/refine/:
+ *   wb-build/            unpacked workbook being edited (created from --twbx on first run)
+ *   YYYYWNN.twbx         repacked from wb-build/ every round, then published with --overwrite --render
+ *   render/*.png, publish-result.json, backup/   written by publish-to-cloud/scripts/publish.py
+ *   compare.html         copied from ../assets/compare.html when missing
+ *
+ * --patch additionally runs validate-twb.ts (field-reference checks against the generation patch).
  */
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { repoRootFrom, parsePatchArg, loadPatch } from "./lib/paths.js";
+import { fileURLToPath } from "node:url";
+import { XMLValidator } from "fast-xml-parser";
+import { unzip, zipDirectory } from "./lib/zip-tools.js";
+import { repoRootFrom } from "./lib/paths.js";
+
+const REFINE_DIR_NAME = "refine";
 
 interface StepResult {
   step: string;
   ok: boolean;
   summary: string;
+}
+
+function arg(argv: string[], name: string): string | undefined {
+  const i = argv.indexOf(name);
+  return i !== -1 ? argv[i + 1] : undefined;
 }
 
 function run(cmd: string, args: string[], cwd: string): { ok: boolean; stdout: string; stderr: string } {
@@ -26,52 +40,88 @@ function run(cmd: string, args: string[], cwd: string): { ok: boolean; stdout: s
   return { ok: res.status === 0, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
 }
 
+function findTwb(dir: string): string | null {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      const found = findTwb(full);
+      if (found) return found;
+    } else if (entry.name.toLowerCase().endsWith(".twb")) {
+      return full;
+    }
+  }
+  return null;
+}
+
 function main() {
   const argv = process.argv.slice(2);
   const repoRoot = repoRootFrom(import.meta.url);
-  const patchPath = parsePatchArg(argv);
-  const { patchAbs, workingDir, outputAbs } = loadPatch(patchPath, repoRoot);
-  const scriptsDir = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
+  const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
   const publishPy = path.resolve(scriptsDir, "../../publish-to-cloud/scripts/publish.py");
-  const themeDir = path.dirname(outputAbs);
-  const viewsIdx = argv.indexOf("--views");
-  const views = viewsIdx !== -1 ? argv[viewsIdx + 1] : undefined;
-  const skipValidate = argv.includes("--skip-validate");
+  const compareTemplate = path.resolve(scriptsDir, "../assets/compare.html");
 
-  if (!fs.existsSync(workingDir)) {
-    throw new Error(`Working directory not found: ${workingDir}. Run unpack-template.ts + apply-edits.ts first.`);
+  const twbxArg = arg(argv, "--twbx");
+  if (!twbxArg) throw new Error("Missing --twbx outputs/{theme}/refine/YYYYWNN.twbx");
+  const twbxAbs = path.isAbsolute(twbxArg) ? twbxArg : path.resolve(repoRoot, twbxArg);
+  const refineDir = path.dirname(twbxAbs);
+  if (path.basename(refineDir) !== REFINE_DIR_NAME) {
+    throw new Error(`--twbx must live in outputs/{theme}/${REFINE_DIR_NAME}/ (got ${twbxAbs})`);
   }
+  const themeDir = path.dirname(refineDir);
+  const buildDir = path.join(refineDir, "wb-build");
+  const views = arg(argv, "--views");
+  const patchArg = arg(argv, "--patch");
 
   const steps: StepResult[] = [];
 
-  if (!skipValidate) {
-    const v = run("npx", ["tsx", path.join(scriptsDir, "validate-twb.ts"), "--patch", patchAbs], repoRoot);
+  if (!fs.existsSync(path.join(refineDir, "compare.html")) && fs.existsSync(compareTemplate)) {
+    fs.copyFileSync(compareTemplate, path.join(refineDir, "compare.html"));
+  }
+
+  if (!fs.existsSync(buildDir)) {
+    if (!fs.existsSync(twbxAbs)) throw new Error(`Neither ${buildDir} nor ${twbxAbs} exists.`);
+    unzip(twbxAbs, buildDir);
+    steps.push({ step: "unpack", ok: true, summary: `${twbxAbs} -> ${buildDir}` });
+  }
+
+  const twb = findTwb(buildDir);
+  if (!twb) {
+    steps.push({ step: "validate", ok: false, summary: `No .twb under ${buildDir}` });
+    return finish(steps, null, 1);
+  }
+  const wellFormed = XMLValidator.validate(fs.readFileSync(twb, "utf8"), { allowBooleanAttributes: true });
+  if (wellFormed !== true) {
+    const e = wellFormed.err;
+    steps.push({ step: "validate", ok: false, summary: `XML not well-formed: line ${e.line}: ${e.msg}` });
+    return finish(steps, null, 1);
+  }
+  let validateSummary = "well-formed";
+  if (patchArg) {
+    const v = run("npx", ["tsx", path.join(scriptsDir, "validate-twb.ts"), "--patch", patchArg], repoRoot);
     let ok = v.ok;
-    let summary = v.stdout.trim().split("\n").slice(-1)[0] ?? "";
     try {
       const parsed = JSON.parse(v.stdout);
       ok = parsed.ok !== false;
       const errors = (parsed.issues ?? []).filter((i: { level: string }) => i.level === "error");
-      summary = errors.length ? errors.map((e: { message: string }) => e.message).join(" | ") : "no errors";
+      validateSummary = errors.length ? errors.map((e: { message: string }) => e.message).join(" | ") : "no errors";
     } catch {
-      summary = (v.stderr || summary).trim();
+      validateSummary = (v.stderr || v.stdout).trim();
     }
-    steps.push({ step: "validate", ok, summary });
-    if (!ok) return finish(steps, null, 1);
+    if (!ok) {
+      steps.push({ step: "validate", ok: false, summary: validateSummary });
+      return finish(steps, null, 1);
+    }
   }
+  steps.push({ step: "validate", ok: true, summary: validateSummary });
 
-  const r = run("npx", ["tsx", path.join(scriptsDir, "repack-twbx.ts"), "--patch", patchAbs], repoRoot);
-  steps.push({ step: "repack", ok: r.ok, summary: r.ok ? outputAbs : r.stderr.trim() });
-  if (!r.ok) return finish(steps, null, 1);
+  zipDirectory(buildDir, twbxAbs);
+  steps.push({ step: "repack", ok: true, summary: twbxAbs });
 
-  const pubArgs = [publishPy, "--twbx", outputAbs, "--output-dir", themeDir, "--overwrite", "--render"];
+  const pubArgs = [publishPy, "--twbx", twbxAbs, "--output-dir", themeDir, "--overwrite", "--render"];
   if (views) pubArgs.push("--views", views);
   const p = run("python", pubArgs, repoRoot);
-  let result: Record<string, unknown> | null = null;
-  const resultPath = path.join(themeDir, "tmp", "publish-result.json");
-  if (fs.existsSync(resultPath)) {
-    result = JSON.parse(fs.readFileSync(resultPath, "utf8"));
-  }
+  const resultPath = path.join(refineDir, "publish-result.json");
+  const result = fs.existsSync(resultPath) ? JSON.parse(fs.readFileSync(resultPath, "utf8")) : null;
   const pubOk = p.ok && result?.ok === true;
   steps.push({
     step: "publish+render",

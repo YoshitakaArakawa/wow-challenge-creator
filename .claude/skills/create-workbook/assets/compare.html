@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Draft vs Cloud</title>
+<!--
+  Refine-loop comparison page. Copied into outputs/{theme}/refine/ by iterate.ts and served by
+  serve-refine.py (the theme folder is the web root, so this page is /refine/compare.html).
+  Left: prototype HTML from ../prototype/. Right: Cloud renders listed in publish-result.json.
+-->
+<style>
+  :root { --bg:#f4f3ef; --ink:#222; --muted:#777; --line:#ddd; --panel:#fff; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#1e1e1c; --ink:#eee; --muted:#9a9a96; --line:#3a3a37; --panel:#2a2a27; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:13px/1.4 system-ui, sans-serif; }
+  header { display:flex; gap:12px; align-items:center; padding:8px 16px; border-bottom:1px solid var(--line); background:var(--panel); position:sticky; top:0; z-index:1; }
+  header select, header button { font:inherit; padding:4px 8px; }
+  header .meta { color:var(--muted); margin-left:auto; }
+  main { display:grid; grid-template-columns: minmax(0,1fr) 460px; gap:16px; padding:16px; height:calc(100vh - 45px); }
+  section { display:flex; flex-direction:column; min-height:0; }
+  h2 { margin:0 0 6px; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  iframe { flex:1; width:100%; border:1px solid var(--line); background:#fff; }
+  .render { flex:1; overflow:auto; border:1px solid var(--line); background:#fff; padding:8px; }
+  .render img { width:420px; max-width:100%; display:block; margin:0 auto 16px; }
+  .empty { color:var(--muted); padding:16px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; height:auto; } iframe { height:80vh; } }
+</style>
+</head>
+<body>
+<header>
+  <label>Draft <select id="draft"></select></label>
+  <button id="reload">Reload both</button>
+  <span class="meta" id="meta"></span>
+</header>
+<main>
+  <section><h2>Draft HTML (prototype/)</h2><iframe id="frame" title="Draft HTML"></iframe></section>
+  <section><h2>Tableau Cloud render (refine/render)</h2><div class="render" id="render"></div></section>
+</main>
+<script>
+const sel = document.getElementById("draft");
+const frame = document.getElementById("frame");
+
+// The local server returns a directory listing for ../prototype/; pick every .html in it.
+async function listDrafts() {
+  const keep = sel.value;
+  sel.innerHTML = "";
+  try {
+    const html = await (await fetch("../prototype/?t=" + Date.now())).text();
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const names = [...doc.querySelectorAll("a[href]")]
+      .map((a) => decodeURIComponent(a.getAttribute("href")))
+      .filter((h) => h.toLowerCase().endsWith(".html"))
+      .sort();
+    for (const n of names) sel.add(new Option(n, n));
+    let remembered = null;
+    try { remembered = localStorage.getItem("compare-draft"); } catch (e) { /* storage may be blocked */ }
+    const preferred = keep || remembered;
+    if (preferred && names.includes(preferred)) sel.value = preferred;
+  } catch (e) {
+    /* falls through to the empty-state message below */
+  }
+  if (!sel.options.length) sel.add(new Option("(no HTML in prototype/)", ""));
+}
+
+function loadDraft() {
+  frame.src = sel.value ? "../prototype/" + encodeURIComponent(sel.value) + "?t=" + Date.now() : "about:blank";
+}
+
+async function loadRender() {
+  const box = document.getElementById("render");
+  const meta = document.getElementById("meta");
+  try {
+    const r = await (await fetch("publish-result.json?t=" + Date.now())).json();
+    const renders = r.renders || [];
+    box.innerHTML = renders.length ? "" : '<p class="empty">No renders yet. Run iterate.ts.</p>';
+    for (const item of renders) {
+      const file = item.filePath.split(/[\\/]/).pop();
+      const img = new Image();
+      img.alt = item.viewName;
+      img.src = "render/" + encodeURIComponent(file) + "?t=" + Date.now();
+      box.appendChild(img);
+    }
+    const at = new Date(r.createdAt || r.attemptedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+    meta.textContent = (r.ok ? r.workbookName + " · published " : "last publish failed · ") + at + " JST";
+  } catch (e) {
+    box.innerHTML = '<p class="empty">publish-result.json not found. Run iterate.ts.</p>';
+    meta.textContent = "";
+  }
+}
+
+async function reloadAll() {
+  await listDrafts();
+  loadDraft();
+  loadRender();
+}
+
+sel.addEventListener("change", () => {
+  try { localStorage.setItem("compare-draft", sel.value); } catch (e) { /* per-viewer convenience only */ }
+  loadDraft();
+});
+document.getElementById("reload").addEventListener("click", reloadAll);
+reloadAll();
+</script>
+</body>
+</html>

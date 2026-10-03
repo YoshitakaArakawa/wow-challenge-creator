@@ -9,6 +9,10 @@ nul
 # Per-challenge tmp folders (extraction byproducts, screenshots, reference downloads)
 outputs/*/tmp/
 
+# Per-challenge prototype HTML and refine loop (compare page, working workbook, Cloud renders)
+outputs/*/prototype/
+outputs/*/refine/
+
 # Downloaded third-party datasets (Kaggle etc.) — license-bound, fetch via documented steps
 outputs/*/Dataset/
 outputs/*/data/
