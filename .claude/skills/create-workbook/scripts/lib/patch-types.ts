@@ -5,7 +5,6 @@ export interface WorkbookPatch {
   outputPath: string;
   workingDir?: string;
   dataSourceSwap?: DataSourceSwap | null;
-  parameters?: ParameterSpec[];
   calculatedFields?: CalculatedFieldSpec[];
   worksheets?: WorksheetSpec[];
   dashboards?: DashboardSpec[];
@@ -14,15 +13,6 @@ export interface WorkbookPatch {
 export interface DataSourceSwap {
   from: string;
   to: string;
-}
-
-export interface ParameterSpec {
-  name: string;
-  datatype: "string" | "integer" | "real" | "boolean" | "date" | "datetime";
-  domainType: "list" | "range" | "all";
-  values?: (string | number)[];
-  range?: { min: number; max: number; step?: number };
-  current: string | number;
 }
 
 export interface CalculatedFieldSpec {

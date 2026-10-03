@@ -7,7 +7,6 @@ import {
   findPrimaryDatasourceName,
   insertCalculatedFields,
   insertFolders,
-  insertParameters,
   insertWorksheets,
   insertDashboards,
   insertWindows,
@@ -47,10 +46,6 @@ async function main() {
     xml = insertFolders(xml, primary.name, folders);
   }
 
-  if (patch.parameters?.length) {
-    xml = insertParameters(xml, patch.parameters);
-  }
-
   const worksheetBlocks: string[] = [];
   for (const ws of patch.worksheets ?? []) {
     if (!ws.rawXml) throw new Error(`Worksheet "${ws.name}" has no rawXml`);
@@ -80,7 +75,6 @@ async function main() {
         primaryDatasource: primary,
         calculatedFieldsAdded: Object.keys(calcIdMap).length,
         calcIdMap,
-        parametersAdded: patch.parameters?.length ?? 0,
         worksheetsAdded: worksheetBlocks.length,
         dashboardsAdded: dashboardBlocks.length,
       },

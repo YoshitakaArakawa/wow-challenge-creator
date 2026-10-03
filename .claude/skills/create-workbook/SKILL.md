@@ -11,7 +11,7 @@ description: 要件文を元にTableauワークブック(.twbx)を生成する�
 
 **2 段階で組み立てる**:
 1. **足場はパッチ JSON で作る**: テンプレの展開と、計算フィールドの一括投入（フォルダ分け込み）は `apply-edits.ts` が決定論的に行う。式の XML エスケープと改行の変換を任せられる
-2. **シートとダッシュボードは `refine/wb-build/` の TWB を直接編集して作る**: パラメータ、Pivot、色の割り当て、横並びや固定高さのダッシュボードはパッチで表せない。足場ができたら、以後は TWB を直接編集する
+2. **シートとダッシュボードは `refine/wb-build/` の TWB を直接編集して作る**: パラメータ、Pivot、色の割り当て、横並びや固定高さのダッシュボードはパッチで表せない。足場ができたら、以後は TWB を直接編集する。直接編集とは、Claude が TWB の XML ファイルを書き換えること。Tableau Desktop での操作ではない
 
 テンプレ由来の `<workbook>` ルート、データソース接続、フォントは温存する。
 
@@ -215,6 +215,6 @@ pip install -r vendor/tableau-plugin/scripts/requirements.txt   # XSD検証用�
 
 - **対象外**: Sankey, Radial, Hex Tile, Map, Web Data Connector
 - データソース置換は未対応（パッチの `dataSourceSwap` は未実装）。データソースはテンプレの Sample-Superstore を使う
-- パッチの `parameters` は、TWB に `<datasource name='Parameters'>` がある場合だけ使える。現行テンプレには無いので、パラメータは直接編集で足す（cheatsheet の「パラメータ」）
+- パラメータはパッチで表せない。TWB の直接編集で足す（[references/twb-skeleton-cheatsheet.md](references/twb-skeleton-cheatsheet.md) の「パラメータ」）
 - XSD検証は 2025.1 より古い `source-build` のブックを検証できない
 - Tableau Desktop自動検証CLIは存在しない。描画の自動確認は Cloud 経由（Step 5）で行い、Desktop での最終確認は手動（Step 6）

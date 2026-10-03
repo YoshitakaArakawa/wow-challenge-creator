@@ -11,7 +11,6 @@ import fs from "node:fs";
 import {
   CalculatedFieldSpec,
   DashboardSpec,
-  ParameterSpec,
 } from "./patch-types.js";
 
 export function escapeXml(value: string): string {
@@ -167,49 +166,6 @@ export function insertFolders(xml: string, dsName: string, folders: Record<strin
     }
   }
   return xml.slice(0, start) + body + xml.slice(end);
-}
-
-/**
- * Build a `<column>` parameter element. Inserted into the Parameters datasource block.
- */
-function buildParameterXml(p: ParameterSpec): string {
-  const quotedValue = typeof p.current === "string" ? `&quot;${escapeXml(p.current)}&quot;` : String(p.current);
-  const attrs = [
-    `caption='${escapeXml(p.name)}'`,
-    `datatype='${p.datatype}'`,
-    `name='[Parameter ${escapeXml(p.name)}]'`,
-    `param-domain-type='${p.domainType}'`,
-    `role='measure'`,
-    `type='${p.datatype === "integer" || p.datatype === "real" ? "quantitative" : "nominal"}'`,
-    `value='${quotedValue}'`,
-  ];
-
-  let inner = "";
-  if (p.domainType === "list" && p.values) {
-    const members = p.values
-      .map((v) => {
-        const escaped = typeof v === "string" ? `&quot;${escapeXml(v)}&quot;` : String(v);
-        const alias = typeof v === "string" ? escapeXml(v) : String(v);
-        return `        <member alias='${alias}' value='${escaped}'/>`;
-      })
-      .join("\n");
-    inner = `\n      <members>\n${members}\n      </members>`;
-  } else if (p.domainType === "range" && p.range) {
-    const step = p.range.step ?? 1;
-    inner = `\n      <range granularity='${step}' min='${p.range.min}' max='${p.range.max}'/>`;
-  }
-
-  return `\n    <column ${attrs.join(" ")}>${inner}\n    </column>`;
-}
-
-export function insertParameters(xml: string, parameters: ParameterSpec[]): string {
-  if (parameters.length === 0) return xml;
-  const anchor = /<datasource\b[^>]*\bname=['"]Parameters['"][^>]*>/;
-  let mutated = xml;
-  for (const p of parameters) {
-    mutated = insertBeforeClosingTag(mutated, "datasource", buildParameterXml(p), anchor);
-  }
-  return mutated;
 }
 
 /**
