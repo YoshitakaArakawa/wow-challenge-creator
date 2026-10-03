@@ -53,6 +53,7 @@ note: create-workbook で rawXml・後処理スクリプトを使って TWB を�
 | 日付 | `*MMM d, yyyy` |
 
 - 符号付き通貨で `"$"` を引用符で囲むと、`+` と `$` の間で改行されることがある。
+- 文字列を含む書式（例：`"▲ Above range by $"#,##0`、`0" outside range"`）は Cloud の描画で無視され、既定の書式で出る。文言を付けたいときは、文字列を返す計算にする。
 
 ## 色の割り当て
 
@@ -82,7 +83,7 @@ note: create-workbook で rawXml・後処理スクリプトを使って TWB を�
 - 二重軸は `<rows>([A] + [B])</rows>` とし、`pane id='1'` を A、`pane id='2'` を B に対応させる。A が背面に描かれるので、帯（ガント）を A、主系列を B にする。
 - ペインと軸の対応は、行の二重軸なら `y-axis-name`、列の二重軸（`<cols>([A] + [B])</cols>`）なら `x-axis-name` で書く。取り違えると両ペインに同じ書式が当たる。
 - 同じメジャーを 2 回置いた二重軸は、2 つのペインを軸の名前で区別できない。2 本目は同じ値の別名の計算（アドホック計算でよい）にする。
-- 軸の同期は B 側に `<encoding attr='space' ... fold='true' synchronized='true' type='space' />` を置く。
+- 軸の同期は、ワークシートの `<style>` の `<style-rule element='axis'>` に、B のフィールドを指す `<encoding attr='space' class='0' field='[ds].[B]' field-type='quantitative' fold='true' scope='rows' synchronized='true' type='space' />` を置く。ペインの `<style>` に書いても同期されない。
 - 平均線と「平均 ± n 標準偏差」の帯は、アナリティクスペイン相当の参照線で描く。フィールドを追加せず、ペイン内のマークから計算される。今週を除外したいなら、今週を別ペインに分ける（判定フィールドを列に置く）。
 
 ```xml
@@ -103,6 +104,7 @@ note: create-workbook で rawXml・後処理スクリプトを使って TWB を�
 - 見出しの文字の書式は `<style-rule element='header'>` に書く。行見出しは `field` 指定で色・太さが効く。列見出しの色は `scope='cols'`（`field` なし）で効く。列見出しの太字は XML でも Desktop でも効かなかった（未解決）。
 - 表の区切り線（`element='table-div'`）で行の間に線を出すには `div-level` を 1 にする。区切り線は見出しの段・列にもかかるので、タイルの間だけを区切りたいときはマークの枠線（viz-techniques.md）を使う。
 - 離散ピルの「ヘッダーの表示」オフは `<style-rule element='label'>` に `<format attr='display' field='[ds].[none:X:nk]' value='false' />`（class / scope なし）で書く。`element='header'` の `display` は無視される。連続軸の非表示は `element='axis'` に `scope` 付きで書く。
+- 行・列のフィールドラベル（シェルフに置いたフィールド名の見出し）を消すには、`<style-rule element='worksheet'>` に `<format attr='display-field-labels' scope='rows' value='false' />` と、同じ形の `scope='cols'` を書く。
 - ビュー内の手動ソートは `<sort class='manual' column='…' direction='ASC'><dictionary><bucket>&quot;A&quot;</bucket>…</dictionary></sort>` を `<filter>` の後・`<aggregation>` の前に置く。XSD が要求する `<manual-sort>` は Desktop に拒否される（XSD と Desktop の食い違い。XSD 検証のエラーは無視してよい）。
 
 ## テキスト（formatted-text）
@@ -110,10 +112,13 @@ note: create-workbook で rawXml・後処理スクリプトを使って TWB を�
 - 空白だけの `<run>` は捨てられる。項目間の空白は、隣の文字を含む run の中に書く。
 - シートタイトルには `<[datasource].[attr:...]>` の形でフィールドを埋め込める。埋め込むフィールドは、いずれかのペインの詳細などビューに置く。
 - 値が無いときは NULL ではなく空文字 `''` を返すようにする（ラベルに不要な表示を出さない）。
+- 塗りつぶしの四角の記号（■ █）は Cloud の描画で「..」になり、同じ行の後ろの文字も消える。▲ ▼ · — は正しく出る。帯の見本のような凡例は、記号ではなく言葉で書く。
+- パラメータの値をテキストに出すとき、ラベルに `<[Parameters].[Parameter 1]>` を埋め込む書き方と、パラメータを参照するアドホックの文字列計算は、Cloud の描画でどちらも空になった（後者はシート全体が空白になる）。選択中の値は、データ側のフィールドから組み立てる（例：`MIN(IF [Is This Week] THEN [Week] END)`）。
 
 ## ダッシュボード
 
-- シート（テキスト表・テキストだけのシート）が `#####` になるのは、多くはダッシュボード上の表示の高さが足りないとき（次に多いのは幅）。直すときは、そのシートのゾーンの高さを足すか、ダッシュボード自体の高さを足す。高さの目安は行数 × 行の高さ＋余白。
+- シートにスクロールバーが出る、またはどのシートも `#####` になるときは、まずダッシュボードの `<window>` に Fit の指定（`<zoom type='entire-view' />`）があるかを確かめる（twb-skeleton-cheatsheet.md の「ウィンドウ」）。
+- Fit を指定してもシート（テキスト表・テキストだけのシート）が `#####` になるのは、多くはダッシュボード上の表示の高さが足りないとき（次に多いのは幅）。直すときは、そのシートのゾーンの高さを足すか、ダッシュボード自体の高さを足す。高さの目安は行数 × 行の高さ＋余白。
 - 固定サイズのゾーン高さの合計に、ゾーンごとの margin（上下）とコンテナの margin を足した値が、ダッシュボードの高さに収まるようにする。溢れた分は画面外に出て見えなくなる。
 - `renderDashboard` は全シートを縦に等分するだけ。横並びや固定高さが要るレイアウトは、後処理で `<dashboards>` と `<windows>` を書く。
 - 縦の流れコンテナで、表のシート（KPI のテキスト表）の近くに新しいテキストゾーンを足したら、その表が `#####` になり、ゾーンの大きさを変えても直らなかったことがある。凡例などの短い文は、新しいゾーンにせず、既存のテキストゾーン（段の見出しなど）の行として足す。
@@ -126,7 +131,7 @@ note: create-workbook で rawXml・後処理スクリプトを使って TWB を�
 
 1. 出題のデータ（`common/Sample - Superstore.xlsx`）を `refine/wb-build/Data/Superstore/` にコピーする。
 2. `<named-connection>` の中の `<connection class='excel-direct'>` の `filename` を、`wb-build` からの相対パスに書き換える。
-3. `<datasource>` の中の `<extract …>` から `</extract>` までを丸ごと削除する（`<folders-common>` の後、`<layout>` の前にある）。
+3. `<datasource>` の中の `<extract …>` から `</extract>` までを丸ごと削除する（`<folders-common>` の後、`<layout>` の前にある）。`<object-graph>` の中の `<properties context='extract'>…</properties>` も削除し、`<properties context=''>` だけを残す。
 4. `refine/wb-build/Data/Downloads/` の hyper ファイルを取り除く。
 
 ```xml
@@ -163,7 +168,24 @@ note: create-workbook で rawXml・後処理スクリプトを使って TWB を�
 </relation>
 ```
 
-- `<metadata-records>` から元の列（Sales / Profit）のレコードを外し、`Pivot Field Names`（string, `parent-name` は `[Pivot]`）と `Pivot Field Values`（real）のレコードを足す。
+- `<metadata-records>` から元の列（Sales / Profit）のレコードを外し、`Pivot Field Names`（string）と `Pivot Field Values`（real）のレコードを足す。どちらも `parent-name` は `[Pivot]`、`object-id` は他の列と同じにする。他の列の `parent-name` は `[Orders]` のままでよい。
+
+```xml
+<metadata-record class='column'>
+  <remote-name>Pivot Field Names</remote-name>
+  <remote-type>129</remote-type>
+  <local-name>[Pivot Field Names]</local-name>
+  <parent-name>[Pivot]</parent-name>
+  <remote-alias>Pivot Field Names</remote-alias>
+  <ordinal>20</ordinal>
+  <local-type>string</local-type>
+  <aggregation>Count</aggregation>
+  <contains-null>true</contains-null>
+  <object-id>[Orders_xxxx]</object-id>
+</metadata-record>
+```
+
+- テンプレの `0_raw` フォルダにある `[Sales]` / `[Profit]` の `folder-item` は、残したままでも動く。
 - 表示名は `<datasource>` 直下の `<column caption='Metric' name='[Pivot Field Names]' …/>` で付ける。計算式からは `[Pivot Field Names]` / `[Pivot Field Values]` で参照する。
 
 ## 計算フィールドの整理（フォルダ）

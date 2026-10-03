@@ -93,7 +93,19 @@ note: TWB を直接編集してシートやダッシュボードを書くとき�
   <datasource caption='Orders (Sample - Superstore)' name='federated.xxxxx' ...>
 ```
 
-パラメータを参照するシートは、`<view>` の `<datasources>` と `<datasource-dependencies datasource='Parameters'>` にも `Parameters` を書く。
+パラメータを参照するシートは、`<view>` の `<datasources>` と `<datasource-dependencies datasource='Parameters'>` にも `Parameters` を書く。`<view>` の `<datasources>` では主データソースを先、`Parameters` を後に書く。逆にすると、Cloud が全シートを "does not have a valid data source" で拒否する（XSD 検証は通る）。
+
+```xml
+<view>
+  <datasources>
+    <datasource caption='Orders (Sample - Superstore)' name='federated.xxxxx' />
+    <datasource name='Parameters' />
+  </datasources>
+  <datasource-dependencies datasource='Parameters'>
+    <column caption='Select a Week' datatype='date' name='[Parameter 1]' ...>...</column>
+  </datasource-dependencies>
+  <datasource-dependencies datasource='federated.xxxxx'>...</datasource-dependencies>
+```
 
 ### リスト型パラメータ
 ```xml
@@ -152,27 +164,48 @@ note: TWB を直接編集してシートやダッシュボードを書くとき�
 
 ## ダッシュボード
 
+固定サイズで、縦の流れコンテナに段を積む形。段の中で横に並べるときは、横の流れコンテナを入れ子にする。
+
 ```xml
-<dashboard name='Main'>
-  <style/>
-  <size maxheight='800' maxwidth='1200' minheight='800' minwidth='1200'/>
+<dashboard enable-sort-zone-taborder='true' name='Main'>
+  <style />
+  <size maxheight='1000' maxwidth='420' minheight='1000' minwidth='420' sizing-mode='fixed' />
   <zones>
-    <zone h='100000' id='1' type-v2='layout-basic' w='100000' x='0' y='0'>
-      <zone h='50000' id='2' name='KPI Trend' w='100000' x='0' y='0'>
+    <zone id='100' param='vert' type-v2='layout-flow' x='0' y='0' w='100000' h='100000'>
+      <!-- テキスト。改行は「Æ」と生の改行だけの run（閉じタグを次の行に書く） -->
+      <zone id='101' type-v2='text' fixed-size='58' is-fixed='true' forceUpdate='true' x='2857' y='1149' w='94286' h='5556'>
+        <formatted-text>
+          <run bold='true' fontcolor='#6e6e6e' fontsize='8'>SUPERSTORE</run>
+          <run>Æ
+</run>
+          <run bold='true' fontcolor='#1d1f24' fontsize='16'>Weekly Health Check</run>
+        </formatted-text>
         <zone-style>
-          <format attr='border-color' value='#000000'/>
+          <format attr='border-style' value='none' />
+          <format attr='margin' value='4' />
         </zone-style>
       </zone>
-      <zone h='50000' id='3' name='Custom Sheet' w='100000' x='0' y='50000'/>
+      <!-- 余白 -->
+      <zone id='102' type-v2='empty' fixed-size='12' is-fixed='true' x='2857' y='6705' w='94286' h='1149' />
+      <!-- シート（高さ固定） -->
+      <zone id='116' name='KPI' show-title='false' fixed-size='90' is-fixed='true' x='2857' y='42305' w='94286' h='8621' />
+      <!-- 横に 2 枚、均等に並べる -->
+      <zone id='119' type-v2='layout-flow' param='horz' layout-strategy-id='distribute-evenly' fixed-size='152' is-fixed='true' x='2857' y='50925' w='94286' h='12868'>
+        <zone id='117' name='Sales Chart' show-title='false' x='2857' y='50925' w='47143' h='12868' />
+        <zone id='118' name='Profit Chart' show-title='false' x='50000' y='50925' w='47143' h='12868' />
+      </zone>
     </zone>
   </zones>
-  <devicelayouts/>
+  <devicelayouts />
 </dashboard>
 ```
 
 **重要**:
-- 座標系は **100000 = 100%**（ダッシュボード全体の幅・高さに対する比率を 10万分率で）
-- `zone[type-v2='layout-basic']` がコンテナ、子の `zone` が個別シート枠
+- `x` / `y` / `w` / `h` は **100000 = 100%**（ダッシュボード全体に対する 10 万分率）。vendor の examples の JSON はピクセルで書かれているが、TWB では 10 万分率で書く
+- 流れコンテナ（`type-v2='layout-flow'`）の中のゾーンは、`fixed-size`（ピクセル）と `is-fixed='true'` で大きさを決める。`x` / `y` / `w` / `h` も書く
+- `param='vert'` が縦、`param='horz'` が横。`layout-strategy-id='distribute-evenly'` で子を均等に配分する
+- `id` はダッシュボード内で重複させない
+- シートのゾーンは `name` にシート名を書き、`type-v2` は付けない
 
 ## ウィンドウ（必須）
 
@@ -184,10 +217,17 @@ note: TWB を直接編集してシートやダッシュボードを書くとき�
     <cards>...</cards>
   </window>
   <window class='dashboard' name='Main' maximized='true'>
-    <cards>...</cards>
+    <viewpoints>
+      <viewpoint name='KPI Trend'>
+        <zoom type='entire-view' />
+      </viewpoint>
+    </viewpoints>
+    <active id='-1' />
   </window>
 </windows>
 ```
+
+ダッシュボードの `<window>` には、載せたシートごとに `<viewpoint>` を書き、`<zoom type='entire-view' />`（Fit の「ビュー全体」）を指定する。無いとシートが標準サイズで描かれ、ゾーンにスクロールバーが出たり、テキストのシートが `#####` になったりする。
 
 apply-edits.ts は `<cards/>` を空のまま挿入し、Tableau Desktopが初回オープン時に自動補完するのを期待する（★要検証）。
 
