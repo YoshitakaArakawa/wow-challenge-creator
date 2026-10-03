@@ -19,12 +19,12 @@ So this week, we'll take one week of Superstore and answer four shared questions
   - Was it better than the same time last year? Compare with the same 13 weeks last year: the latest 13 weeks (this week included) shifted back 52 weeks. 52 weeks is 364 days, so the weekdays line up
 - Answer Yes if this week is at or above the comparison average, otherwise No
 - Define the expected range as the comparison average ± 1 sample standard deviation
-- In the header, show the four Yes / No answers as 2 x 2 tiles (questions as rows, Sales and Profit as columns). Color each tile by where this week sits: above the range, at or above the average, below the average, or below the range. Add ▲ / ▼ to the answers outside the range
-- In each row, add a KPI card per metric: this week's value and the $ gap from the average. Only when this week is outside the range, add how far it is above the upper bound or below the lower bound, with ▲ / ▼.
+- In the header, show the four Yes / No answers as 2 x 2 tiles (questions as rows, Sales and Profit as columns), with this week's value under each metric name in the column headers. Color each tile by where this week sits: above the range, at or above the average, below the average, or below the range. Add ▲ / ▼ to the answers outside the range
+- In each row, add a KPI card per metric that leads with the $ gap from the comparison average, followed by that average. Only when this week is outside the range, add how far it is above the upper bound or below the lower bound, with ▲ / ▼.
 - Row 1 charts: bars for the previous 13 weeks with the range band and the average line (the Analytics pane is enough). Stop the average line before this week. Set this week's bar slightly apart and color it like the tiles
 - Row 2 charts: lines for this year's latest 13 weeks and last year's same 13 weeks, with last year's average line and range band. Keep this year's line in front, and highlight this week as a circle colored like the tiles
 - Below each row's charts, add a one-line, right-aligned legend for the lines, the average line and the band
-- No value labels on the charts (this week's value is in the KPI cards)
+- No value labels on the charts (this week's value is in the tile headers)
 - Match the formatting as closely as possible
 
 <!-- HTML VERSION (for site posting)
@@ -49,12 +49,12 @@ So this week, we'll take one week of Superstore and answer four shared questions
 </li>
 <li>Answer Yes if this week is at or above the comparison average, otherwise No</li>
 <li>Define the expected range as the comparison average ± 1 sample standard deviation</li>
-<li>In the header, show the four Yes / No answers as 2 x 2 tiles (questions as rows, Sales and Profit as columns). Color each tile by where this week sits: above the range, at or above the average, below the average, or below the range. Add ▲ / ▼ to the answers outside the range</li>
-<li>In each row, add a KPI card per metric: this week's value and the $ gap from the average. Only when this week is outside the range, add how far it is above the upper bound or below the lower bound, with ▲ / ▼.</li>
+<li>In the header, show the four Yes / No answers as 2 x 2 tiles (questions as rows, Sales and Profit as columns), with this week's value under each metric name in the column headers. Color each tile by where this week sits: above the range, at or above the average, below the average, or below the range. Add ▲ / ▼ to the answers outside the range</li>
+<li>In each row, add a KPI card per metric that leads with the $ gap from the comparison average, followed by that average. Only when this week is outside the range, add how far it is above the upper bound or below the lower bound, with ▲ / ▼.</li>
 <li>Row 1 charts: bars for the previous 13 weeks with the range band and the average line (the Analytics pane is enough). Stop the average line before this week. Set this week's bar slightly apart and color it like the tiles</li>
 <li>Row 2 charts: lines for this year's latest 13 weeks and last year's same 13 weeks, with last year's average line and range band. Keep this year's line in front, and highlight this week as a circle colored like the tiles</li>
 <li>Below each row's charts, add a one-line, right-aligned legend for the lines, the average line and the band</li>
-<li>No value labels on the charts (this week's value is in the KPI cards)</li>
+<li>No value labels on the charts (this week's value is in the tile headers)</li>
 <li>Match the formatting as closely as possible</li>
 </ul>
 
