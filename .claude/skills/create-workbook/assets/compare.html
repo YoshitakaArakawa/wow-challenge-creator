@@ -7,7 +7,8 @@
 <!--
   Refine-loop comparison page. Copied into outputs/{theme}/refine/ by iterate.ts and served by
   serve-refine.py (the theme folder is the web root, so this page is /refine/compare.html).
-  Left: prototype HTML from ../prototype/. Right: Cloud renders listed in publish-result.json.
+  Left: draft HTML from ../prototype/ (original prototypes) and ./ (drafts revised during refine).
+  Right: Cloud renders listed in publish-result.json.
 -->
 <style>
   :root { --bg:#f4f3ef; --ink:#222; --muted:#777; --line:#ddd; --panel:#fff; }
@@ -19,12 +20,12 @@
   header { display:flex; gap:12px; align-items:center; padding:8px 16px; border-bottom:1px solid var(--line); background:var(--panel); position:sticky; top:0; z-index:1; }
   header select, header button { font:inherit; padding:4px 8px; }
   header .meta { color:var(--muted); margin-left:auto; }
-  main { display:grid; grid-template-columns: minmax(0,1fr) 460px; gap:16px; padding:16px; height:calc(100vh - 45px); }
+  main { display:grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr); gap:16px; padding:16px; height:calc(100vh - 45px); }
   section { display:flex; flex-direction:column; min-height:0; }
   h2 { margin:0 0 6px; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
   iframe { flex:1; width:100%; border:1px solid var(--line); background:#fff; }
-  .render { flex:1; overflow:auto; border:1px solid var(--line); background:#fff; padding:8px; }
-  .render img { width:420px; max-width:100%; display:block; margin:0 auto 16px; }
+  .render { flex:1; overflow:auto; border:1px solid var(--line); background:#fff; padding:24px 32px; }
+  .render img { width:100%; max-width:840px; display:block; margin:0 auto 24px; }
   .empty { color:var(--muted); padding:16px; }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; height:auto; } iframe { height:80vh; } }
 </style>
@@ -36,25 +37,49 @@
   <span class="meta" id="meta"></span>
 </header>
 <main>
-  <section><h2>Draft HTML (prototype/)</h2><iframe id="frame" title="Draft HTML"></iframe></section>
+  <section><h2>Draft HTML</h2><iframe id="frame" title="Draft HTML"></iframe></section>
   <section><h2>Tableau Cloud render (refine/render)</h2><div class="render" id="render"></div></section>
 </main>
 <script>
 const sel = document.getElementById("draft");
 const frame = document.getElementById("frame");
 
-// The local server returns a directory listing for ../prototype/; pick every .html in it.
+// The local server returns directory listings; collect every .html from both folders.
+// Option values are paths relative to this page (refine/).
+const SOURCES = [
+  { dir: "./", label: "refine/" },
+  { dir: "../prototype/", label: "prototype/" },
+];
+
+async function htmlIn(dir) {
+  const html = await (await fetch(dir + "?t=" + Date.now())).text();
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return [...doc.querySelectorAll("a[href]")]
+    .map((a) => decodeURIComponent(a.getAttribute("href")))
+    .filter((h) => h.toLowerCase().endsWith(".html") && h !== "compare.html")
+    .sort();
+}
+
 async function listDrafts() {
   const keep = sel.value;
   sel.innerHTML = "";
+  const names = [];
+  for (const src of SOURCES) {
+    try {
+      const files = await htmlIn(src.dir);
+      if (!files.length) continue;
+      const group = document.createElement("optgroup");
+      group.label = src.label;
+      for (const f of files) {
+        group.appendChild(new Option(f, src.dir + f));
+        names.push(src.dir + f);
+      }
+      sel.appendChild(group);
+    } catch (e) {
+      /* folder missing; skip */
+    }
+  }
   try {
-    const html = await (await fetch("../prototype/?t=" + Date.now())).text();
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const names = [...doc.querySelectorAll("a[href]")]
-      .map((a) => decodeURIComponent(a.getAttribute("href")))
-      .filter((h) => h.toLowerCase().endsWith(".html"))
-      .sort();
-    for (const n of names) sel.add(new Option(n, n));
     let remembered = null;
     try { remembered = localStorage.getItem("compare-draft"); } catch (e) { /* storage may be blocked */ }
     const preferred = keep || remembered;
@@ -62,11 +87,11 @@ async function listDrafts() {
   } catch (e) {
     /* falls through to the empty-state message below */
   }
-  if (!sel.options.length) sel.add(new Option("(no HTML in prototype/)", ""));
+  if (!sel.options.length) sel.add(new Option("(no draft HTML in refine/ or prototype/)", ""));
 }
 
 function loadDraft() {
-  frame.src = sel.value ? "../prototype/" + encodeURIComponent(sel.value) + "?t=" + Date.now() : "about:blank";
+  frame.src = sel.value ? encodeURI(sel.value) + "?t=" + Date.now() : "about:blank";
 }
 
 async function loadRender() {

@@ -97,6 +97,7 @@ outputs/{theme}/
   prototype/*.html        ドラフト HTML（create-requirements が作る。gitignore 済み）
   refine/
     YYYYWNN.twbx          作業用かつ publish 対象。テーマ直下には .twbx を置かない
+    refine.html           refine 中に改訂するドラフト HTML。1 ファイルを上書きで育てる（prototype/ からコピーして始める）
     wb-build/             編集中の TWB（初回に .twbx から展開）
     compare.html          比較ページ（初回に assets/compare.html からコピー）
     render/*.png          Cloud の描画
@@ -119,7 +120,9 @@ python $SKILL/scripts/serve-refine.py "$THEME_DIR"   # バックグラウンド�
 # → http://127.0.0.1:8790/refine/compare.html
 ```
 
-左にドラフト HTML、右に Cloud の描画 PNG が並ぶ。「Reload both」で最新の publish を読み直す。ユーザーと画面を見ながら進めるときは、このページを Chrome で開いて共有する。
+左にドラフト HTML（`refine/` と `prototype/` の両方から選べる）、右に Cloud の描画 PNG が並ぶ。「Reload both」で最新の publish を読み直す。ユーザーと画面を見ながら進めるときは、このページを Chrome で開いて共有する。
+
+見せ方の変更（レイアウト・文言・情報の削減）は、TWB より先にドラフト HTML で合意する。HTML は数秒で直せ、publish の待ちがない。`prototype/` の原案は要件段階の記録として残し、改訂は `refine/refine.html` を上書きする。版番号は付けない。HTML では Tableau で再現できる表現だけを使う。高さ不足の `#####` や空白の追加のような機械的な修正は、HTML を挟まず TWB を直す。
 
 ループの回し方:
 
