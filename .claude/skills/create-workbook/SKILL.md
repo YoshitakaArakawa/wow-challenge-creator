@@ -30,6 +30,8 @@ WOW の解答は人間が作り直すもの。動くだけでなく、熟練の 
 
 式の型は [references/calc-field-patterns.md](references/calc-field-patterns.md)（ネスト LOD の平均・SD、行ごとの文字列の連結）を使う。
 
+見た目の課題（色付きタイル、強調点、ラベルの重なり、目標・前年との比較など）は、計算や工程を足す前に [references/viz-techniques.md](references/viz-techniques.md) の定石から選ぶ。少ない手順で済み、参加者にも馴染みのある作り方になる。
+
 ## 標準手順
 
 ### Step 1: 前提確認
@@ -212,6 +214,7 @@ Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認
 - [references/twb-skeleton-cheatsheet.md](references/twb-skeleton-cheatsheet.md) — TWB XML骨格チートシート
 - [references/calc-field-patterns.md](references/calc-field-patterns.md) — 計算フィールド/LOD/パラメータの実例XML
 - [references/twb-pitfalls.md](references/twb-pitfalls.md) — XSDを通ってもDesktopで失敗・表示崩れする原因と回避規範（引用符・書式・色・線・テキスト・レイアウト・フォルダ分け）
+- [references/viz-techniques.md](references/viz-techniques.md) — 少ない手順で見た目が良くなる定石（`MIN(1.0)` タイル、二重軸の強調点、別メジャーの参照帯、ラベル設定など）と実証済みの XML
 - [references/chart-recipes/](references/chart-recipes/) — チャート種別ごとのレシピXML（プレースホルダ `{{NAME}}` 形式）
 - `references/schemas/` — Tableau公式XSDの最新スナップショットを置く手元キャッシュ（gitignore対象。新機能の構文を読むときに `update-schemas.ts` で取得）
 - [assets/compare.html](assets/compare.html) — refine ループの比較ページのひな形（`iterate.ts` が `refine/` にコピーし、テンプレートが変われば上書きする）
