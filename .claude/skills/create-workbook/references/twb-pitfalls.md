@@ -101,7 +101,8 @@ note: create-workbook で rawXml・後処理スクリプトを使って TWB を�
 - 色で分けた線の重なり順は、色の凡例の並び順で決まる。先頭の項目が最前面に描かれる。主役の線を前に出すには、色のフィールドに手動ソート（下記）を付けて先頭にする。
 - マークのサイズ（`<format attr='size'>`）は小数で指定できる。Cloud の 2 倍描画で、線は 0.6 で約 7px、0.1 で約 3px。円はサイズの値にほぼ比例して直径が変わる（1.26 で 22px、1.0 で 18px）。
 - 定数フィールドの値に線を引くなら、そのフィールドを詳細に置き、`formula='min'`・`scope='per-table'`・`value-column` に指定する。
-- 見出しの文字の書式は `<style-rule element='header'>` に書く。行見出しは `field` 指定で色・太さが効く。列見出しの色は `scope='cols'`（`field` なし）で効く。列見出しの太字は XML でも Desktop でも効かなかった（未解決）。
+- 見出しの文字の書式は `<style-rule element='header'>` に書く。`field` 指定（`<format attr='color' field='[ds].[none:X:nk]' value='…' />`）は、行見出しでも列見出しでも色・太さ・サイズが効く。列見出しを `scope='cols'` だけで書くと、棒のシートでは色・太字が効くが、テキストのマーク（KPI カード）の列見出しでは色が効かない。列見出しは `field` 指定で書く。
+  - 列に不連続のピルを 2 つ重ねた見出しは、段ごとに `field` を変えて書式を分けられる（例：指標名は太字、その下の値は通常の太さで大きく）。
 - 表の区切り線（`element='table-div'`）で行の間に線を出すには `div-level` を 1 にする。区切り線は見出しの段・列にもかかるので、タイルの間だけを区切りたいときはマークの枠線（viz-techniques.md）を使う。
 - 離散ピルの「ヘッダーの表示」オフは `<style-rule element='label'>` に `<format attr='display' field='[ds].[none:X:nk]' value='false' />`（class / scope なし）で書く。`element='header'` の `display` は無視される。連続軸の非表示は `element='axis'` に `scope` 付きで書く。
 - 行・列のフィールドラベル（シェルフに置いたフィールド名の見出し）を消すには、`<style-rule element='worksheet'>` に `<format attr='display-field-labels' scope='rows' value='false' />` と、同じ形の `scope='cols'` を書く。

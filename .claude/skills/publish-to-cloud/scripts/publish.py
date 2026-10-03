@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Publish a .twbx workbook to Tableau Cloud (OAuth browser sign-in, or PAT if configured), with retries, pre-backup on overwrite,
-and optional server-side rendering of every view to PNG (--render) for a fast edit → publish → look loop."""
+and optional server-side rendering of every view to PNG (--render) for a fast edit → publish → look loop.
+--text-table also saves each view as SVG and extracts its text runs (position, colour, size, weight) into a TSV,
+so text formatting can be checked from a few hundred tokens instead of reading the image."""
 
 import argparse
 import json
@@ -8,6 +10,9 @@ import os
 import re
 import sys
 import time
+import urllib.error
+import urllib.request
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -27,6 +32,9 @@ IMAGE_MAX_AGE_MINUTES = 1
 # Right after publish the workbook may not be queryable yet; poll briefly instead of failing.
 RENDER_READY_RETRIES = 5
 RENDER_READY_WAIT_SECONDS = 3
+# Query View Image accepts format=svg from REST API 3.29 (Tableau Cloud June 2026 / Server 2026.2).
+SVG_MIN_API_VERSION = (3, 29)
+SVG_NS = "{http://www.w3.org/2000/svg}"
 
 
 def parse_args() -> argparse.Namespace:
@@ -49,6 +57,11 @@ def parse_args() -> argparse.Namespace:
         "--views",
         default=None,
         help="Comma-separated view names to render (default: all views). Only with --render.",
+    )
+    p.add_argument(
+        "--text-table",
+        action="store_true",
+        help="With --render, also save each view as SVG and write its text runs to <view>.text.tsv (needs REST API 3.29+).",
     )
     return p.parse_args()
 
@@ -88,12 +101,70 @@ def safe_file_name(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9_-]+", "_", name).strip("_") or "view"
 
 
-def render_views(server: TSC.Server, workbook_id: str, output_dir: Path, only: Optional[set]) -> list:
-    """Download a PNG per view. Returns [{viewName, viewId, filePath}] for the views rendered."""
+def _parse_matrix(transform: Optional[str]) -> tuple:
+    """SVG transform="matrix(a,b,c,d,e,f)" -> affine tuple; anything else is treated as identity."""
+    m = re.match(r"\s*matrix\(([^)]*)\)", transform or "")
+    if not m:
+        return (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+    return tuple(float(v) for v in re.split(r"[ ,]+", m.group(1).strip()))
+
+
+def _compose(outer: tuple, inner: tuple) -> tuple:
+    a, b, c, d, e, f = outer
+    a2, b2, c2, d2, e2, f2 = inner
+    return (a * a2 + c * b2, b * a2 + d * b2, a * c2 + c * d2, b * c2 + d * d2, a * e2 + c * f2 + e, b * e2 + d * f2 + f)
+
+
+def svg_text_rows(svg: bytes) -> list:
+    """Every <text> in a Tableau view SVG as {x, y, fill, size, weight, text}, x/y in page pixels, top to bottom."""
+    rows = []
+
+    def walk(node, matrix):
+        matrix = _compose(matrix, _parse_matrix(node.get("transform")))
+        if node.tag == SVG_NS + "text":
+            text = "".join(node.itertext()).strip()
+            if text:
+                x, y = float(node.get("x", 0)), float(node.get("y", 0))
+                a, b, c, d, e, f = matrix
+                rows.append({
+                    "x": round(a * x + c * y + e),
+                    "y": round(b * x + d * y + f),
+                    "fill": node.get("fill", ""),
+                    "size": node.get("font-size", ""),
+                    "weight": node.get("font-weight", ""),
+                    "text": text,
+                })
+            return
+        for child in node:
+            walk(child, matrix)
+
+    walk(ET.fromstring(svg), (1.0, 0.0, 0.0, 1.0, 0.0, 0.0))
+    return sorted(rows, key=lambda r: (r["y"], r["x"]))
+
+
+def fetch_view_svg(server: TSC.Server, view_id: str) -> bytes:
+    """TSC's populate_image has no format option, so call Query View Image directly."""
+    url = f"{server.baseurl}/sites/{server.site_id}/views/{view_id}/image?format=svg&maxAge={IMAGE_MAX_AGE_MINUTES}"
+    request = urllib.request.Request(url, headers={"X-Tableau-Auth": server.auth_token})
+    with urllib.request.urlopen(request, timeout=120) as response:
+        return response.read()
+
+
+def supports_svg(server: TSC.Server) -> bool:
+    return tuple(int(p) for p in str(server.version).split(".")[:2]) >= SVG_MIN_API_VERSION
+
+
+def render_views(server: TSC.Server, workbook_id: str, output_dir: Path, only: Optional[set], text_table: bool = False) -> list:
+    """Download a PNG per view (plus SVG and a text table with text_table).
+    Returns [{viewName, viewId, filePath[, svgPath, textTablePath]}] for the views rendered."""
     render_dir = output_dir / REFINE_DIR_NAME / "render"
     render_dir.mkdir(parents=True, exist_ok=True)
-    for stale in render_dir.glob("*.png"):
-        stale.unlink()
+    for pattern in ("*.png", "*.svg", "*.text.tsv"):
+        for stale in render_dir.glob(pattern):
+            stale.unlink()
+    if text_table and not supports_svg(server):
+        print(f"--text-table skipped: server REST API {server.version} is older than 3.29 (no SVG view images).", file=sys.stderr)
+        text_table = False
 
     workbook = None
     for attempt in range(RENDER_READY_RETRIES):
@@ -121,7 +192,23 @@ def render_views(server: TSC.Server, workbook_id: str, output_dir: Path, only: O
         server.views.populate_image(view, options)
         target = render_dir / f"{safe_file_name(view.name)}.png"
         target.write_bytes(view.image)
-        rendered.append({"viewName": view.name, "viewId": view.id, "filePath": str(target)})
+        entry = {"viewName": view.name, "viewId": view.id, "filePath": str(target)}
+        if text_table:
+            try:
+                svg = fetch_view_svg(server, view.id)
+            except urllib.error.HTTPError as err:
+                print(f"SVG for {view.name} failed ({err.code}); PNG only.", file=sys.stderr)
+            else:
+                svg_path = render_dir / f"{safe_file_name(view.name)}.svg"
+                svg_path.write_bytes(svg)
+                table_path = render_dir / f"{safe_file_name(view.name)}.text.tsv"
+                columns = ["x", "y", "fill", "size", "weight", "text"]
+                lines = ["\t".join(columns)] + [
+                    "\t".join(str(r[c]) for c in columns) for r in svg_text_rows(svg)
+                ]
+                table_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+                entry.update({"svgPath": str(svg_path), "textTablePath": str(table_path)})
+        rendered.append(entry)
     if only is not None:
         missing = sorted(only - {r["viewName"] for r in rendered})
         if missing:
@@ -195,7 +282,7 @@ def main() -> int:
             renders = None
             if args.render:
                 only = {v.strip() for v in args.views.split(",") if v.strip()} if args.views else None
-                renders = render_views(server, new_wb.id, output_dir, only)
+                renders = render_views(server, new_wb.id, output_dir, only, text_table=args.text_table)
 
             payload = {
                 "ok": True,

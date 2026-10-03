@@ -1,7 +1,7 @@
 /**
  * One round of the refine loop: edit TWB → publish to Tableau Cloud → look at the render.
  *
- *   npx tsx iterate.ts --twbx outputs/{theme}/refine/YYYYWNN.twbx [--views "Dashboard"] [--patch <workbook-patch.json>]
+ *   npx tsx iterate.ts --twbx outputs/{theme}/refine/YYYYWNN.twbx [--views "Dashboard"] [--text-table] [--patch <workbook-patch.json>]
  *   npx tsx iterate.ts --twbx outputs/{theme}/refine/YYYYWNN.twbx --compare-only
  *
  * Works on outputs/{theme}/refine/:
@@ -15,6 +15,7 @@
  * (file://), where fetch() is blocked.
  *
  * --patch additionally runs validate-twb.ts (required elements, a <window> per sheet in the patch, duplicate calc captions).
+ * --text-table also saves each rendered view as SVG plus render/<view>.text.tsv (text, position, colour, size, weight).
  * --compare-only rewrites compare.html / compare-data.js and stops (e.g. after adding a draft HTML).
  */
 import fs from "node:fs";
@@ -158,6 +159,7 @@ function main() {
 
   const pubArgs = [publishPy, "--twbx", twbxAbs, "--output-dir", themeDir, "--overwrite", "--render"];
   if (views) pubArgs.push("--views", views);
+  if (argv.includes("--text-table")) pubArgs.push("--text-table");
   const p = run("python", pubArgs, repoRoot);
   const resultPath = path.join(refineDir, "publish-result.json");
   const result = fs.existsSync(resultPath) ? JSON.parse(fs.readFileSync(resultPath, "utf8")) : null;

@@ -57,7 +57,8 @@ python .claude/skills/publish-to-cloud/scripts/publish.py \
 - `--project "<projectName>"` — 投稿先プロジェクト名（省略時は `.env` の `TABLEAU_PROJECT_NAME`）
 - `--name "<workbookName>"` — Cloud上での表示名（省略時は .twbx のファイル名から拡張子を除いたもの）
 - `--render` — publish 後に全ビューを High 解像度 PNG で `outputs/{theme}/refine/render/<view>.png` に保存（前回の PNG は消す）
-- `--views "A,B"` — `--render` の対象ビューを名前で絞る（省略時は全ビュー。ダッシュボードだけ見たいときに使う）
+- `--views "A,B"` — `--render` の対象ビューを名前で絞る（省略時は全ビュー。ダッシュボードだけ、または直したシートだけ見たいときに使う）
+- `--text-table` — `--render` と併用。各ビューを SVG でも取得し、文字ごとの位置・色・サイズ・太さを `render/<view>.text.tsv` に書き出す。REST API 3.29 以降のサーバーでだけ動き、それより古いと警告を出して PNG だけにする
 
 ### Step 2: 結果確認
 
@@ -75,12 +76,13 @@ python .claude/skills/publish-to-cloud/scripts/publish.py \
   "backupPath": null,
   "source": "outputs/{theme}/refine/2026W40.twbx",
   "renders": [
-    {"viewName": "Dashboard", "viewId": "...", "filePath": "outputs/{theme}/refine/render/Dashboard.png"}
+    {"viewName": "Dashboard", "viewId": "...", "filePath": "outputs/{theme}/refine/render/Dashboard.png",
+     "svgPath": "outputs/{theme}/refine/render/Dashboard.svg", "textTablePath": "outputs/{theme}/refine/render/Dashboard.text.tsv"}
   ]
 }
 ```
 
-`renders[].filePath` を Read で開けば描画結果を Claude が直接見られる。`--render` なしのときは `renders` は `null`。`create-x-post` Skill が次に走るとこのJSONを読んで `webpageUrl` を投稿文に埋め込む。
+`renders[].filePath` を Read で開けば描画結果を Claude が直接見られる。`svgPath` と `textTablePath` は `--text-table` のときだけ入る。SVG 本体は大きい（ダッシュボード 1 枚で数百 KB）ので Read しない。読むのは文字の表のほう。`--render` なしのときは `renders` は `null`。`create-x-post` Skill が次に走るとこのJSONを読んで `webpageUrl` を投稿文に埋め込む。
 
 ## 編集 → publish → 確認のループ
 

@@ -131,7 +131,7 @@ outputs/{theme}/
 1 ラウンドは次の 1 コマンドで回す:
 
 ```bash
-npx tsx $SKILL/scripts/iterate.ts --twbx "$THEME_DIR/refine/2026W40.twbx" [--views "Dashboard"] [--patch "$PATCH"]
+npx tsx $SKILL/scripts/iterate.ts --twbx "$THEME_DIR/refine/2026W40.twbx" [--views "Dashboard"] [--text-table] [--patch "$PATCH"]
 ```
 
 `iterate.ts` は、TWB の整形式チェック → `.twbx` への再梱包 → `publish.py --overwrite --render` を順に行う。`--patch` を付けると `validate-twb.ts`（必須要素・シートごとの `<window>`・キャプション重複）も走る。XSD 検証は含まないので、Step 4 の XSD 検証を通した後に始める。
@@ -155,10 +155,22 @@ npx tsx $SKILL/scripts/iterate.ts --twbx "$THEME_DIR/refine/2026W40.twbx" [--vie
 
 1. `refine/wb-build/*.twb` を直接編集する
 2. `iterate.ts` を実行する
-3. `renders[].png` を Read し、要件・ドラフト HTML と比べて差分を列挙する。観点は「空白ゾーン」「期待値との一致」「色・線・折り返し」「`#####` 表示」
+3. 描画を読み（読み方は下の表）、要件・ドラフト HTML と比べて差分を列挙する。観点は「空白ゾーン」「期待値との一致」「色・線・折り返し」「`#####` 表示」
 4. 差分があれば 1 に戻る。空白シートや `#####` の原因は [references/twb-pitfalls.md](references/twb-pitfalls.md) で当たる
 
 PNG は静止画なので、ツールヒント・パラメータ・ハイライト動作は `webpageUrl` をブラウザで開いて確かめる。
+
+描画は、確かめたい内容に合う形で読む。PNG を毎回全体で読む必要はない。
+
+| 確かめたいこと | 読むもの | 取り方 |
+|---|---|---|
+| レイアウト・余白・重なり・全体の印象 | ダッシュボードの PNG | `--views "<ダッシュボード名>"` |
+| 直したシートの見た目 | そのシートの PNG | `--views "<シート名>"`。シートは単体の大きさで描かれるので、配置はダッシュボードで見る |
+| 文字の色・サイズ・太さ・文言（書式が指定どおりか、色が何種類あるか） | `render/<view>.text.tsv` | `--text-table` を付ける。PNG より少ないトークンで、色コードとピクセル値が正確に出る |
+
+文字の表は、書式を確かめる必要があるときだけ取る。表に出ない配置や見た目は PNG で見る。
+
+refine ループの間はワークシートを非表示にしない。非表示のシートはビューとして publish されず、`--views` で個別に描画できない。非表示にするのは Tableau Public に出す版だけ（Step 6）。
 
 Cloud 側の画像キャッシュで前回の絵が返ることがある（1 分未満の連続 publish）。変化が見えないときは 1 分待って `iterate.ts` を再実行する。
 
@@ -188,6 +200,7 @@ Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認
 - 開き直しはユーザーに頼む（Desktop で開いている版は再生成しても更新されない。保存せずに閉じてから開き直す）
 - Desktop で `refine/YYYYWNN.twbx` に上書き保存しない。`iterate.ts` は毎回 `wb-build` の TWB から作り直すので、その変更は次のラウンドで消える。Desktop での変更は `tmp/` に別名で保存し、XML を写して `wb-build` に反映する
 - Computer Use で Desktop を操作すると、Windows の入力パネル（`textinputhost.exe`）が前面を奪い、クリックがすべて拒否されることがある。数十秒で済む単発の操作（書式を 1 つ変えて別名保存する等）はユーザーに頼む
+- Tableau Public に出す版では、ダッシュボードに載せたワークシートを非表示にする。XML ではそのシートの `<window class='worksheet'>` に `hidden='true'` を付ける（Desktop ではダッシュボードのタブの右クリックから「すべてのシートを非表示」）
 - 問題なければ Step 5 の最後の publish が公開版になる。`refine/publish-result.json` の `webpageUrl` を次の `create-x-post` が読む
 
 ## パッチJSON仕様
