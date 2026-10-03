@@ -31,6 +31,20 @@ export function unzip(zipPath: string, destDir: string): { mainTwb: string | nul
   return { mainTwb, files };
 }
 
+/** First .twb under a directory (depth-first), or null when there is none. */
+export function findTwb(dir: string): string | null {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      const found = findTwb(full);
+      if (found) return found;
+    } else if (entry.name.toLowerCase().endsWith(".twb")) {
+      return full;
+    }
+  }
+  return null;
+}
+
 export function zipDirectory(srcDir: string, destZip: string): void {
   fs.mkdirSync(path.dirname(destZip), { recursive: true });
   const zip = new AdmZip();

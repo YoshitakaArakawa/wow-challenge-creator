@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { unzip } from "./lib/zip-tools.js";
+import { findTwb } from "./lib/zip-tools.js";
 import {
   readTwb,
   writeTwb,
@@ -17,19 +17,6 @@ import {
 } from "./lib/twb-edit.js";
 import { repoRootFrom, parsePatchArg, loadPatch } from "./lib/paths.js";
 import { WorksheetSpec } from "./lib/patch-types.js";
-
-function findMainTwb(workingDir: string): string {
-  const stack = [workingDir];
-  while (stack.length) {
-    const dir = stack.pop()!;
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) stack.push(full);
-      else if (entry.name.toLowerCase().endsWith(".twb")) return full;
-    }
-  }
-  throw new Error(`No .twb under ${workingDir}. Run unpack-template.ts first.`);
-}
 
 function loadRecipe(recipeName: string, repoRoot: string): string {
   const recipePath = path.join(
@@ -76,7 +63,8 @@ async function main() {
     throw new Error(`Working directory not found: ${workingDir}. Run unpack-template.ts first.`);
   }
 
-  const mainTwb = findMainTwb(workingDir);
+  const mainTwb = findTwb(workingDir);
+  if (!mainTwb) throw new Error(`No .twb under ${workingDir}. Run unpack-template.ts first.`);
   let xml = readTwb(mainTwb);
 
   const primary = findPrimaryDatasourceName(xml);

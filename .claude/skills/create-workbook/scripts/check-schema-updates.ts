@@ -1,52 +1,8 @@
-import fs from "node:fs";
-import path from "node:path";
 import axios from "axios";
 import { repoRootFrom } from "./lib/paths.js";
-
-interface VersionFile {
-  _comment?: string;
-  repo: string;
-  sha: string | null;
-  tag: string | null;
-  last_checked: string | null;
-  last_updated: string | null;
-  files: string[];
-}
+import { REPO_API, loadVersion, saveVersion, versionFilePath } from "./lib/schema-version.js";
 
 const CACHE_HOURS = 24;
-const REPO_API = "https://api.github.com/repos/tableau/tableau-document-schemas";
-
-function versionFilePath(repoRoot: string): string {
-  return path.join(
-    repoRoot,
-    ".claude",
-    "skills",
-    "create-workbook",
-    "references",
-    "schemas",
-    ".version",
-  );
-}
-
-// .version is a local cache (gitignored); a fresh clone starts from this empty state.
-const EMPTY_VERSION: VersionFile = {
-  repo: "tableau/tableau-document-schemas",
-  sha: null,
-  tag: null,
-  last_checked: null,
-  last_updated: null,
-  files: [],
-};
-
-function loadVersion(filePath: string): VersionFile {
-  if (!fs.existsSync(filePath)) return { ...EMPTY_VERSION };
-  return JSON.parse(fs.readFileSync(filePath, "utf8")) as VersionFile;
-}
-
-function saveVersion(filePath: string, data: VersionFile): void {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n");
-}
 
 function isCacheFresh(lastChecked: string | null): boolean {
   if (!lastChecked) return false;

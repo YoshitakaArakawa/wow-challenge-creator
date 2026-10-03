@@ -12,7 +12,6 @@ import {
   CalculatedFieldSpec,
   DashboardSpec,
   ParameterSpec,
-  WorksheetSpec,
 } from "./patch-types.js";
 
 export function escapeXml(value: string): string {

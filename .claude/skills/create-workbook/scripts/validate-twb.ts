@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
+import { findTwb } from "./lib/zip-tools.js";
 import { repoRootFrom, parsePatchArg, loadPatch } from "./lib/paths.js";
 
 interface Issue {
@@ -8,25 +9,13 @@ interface Issue {
   message: string;
 }
 
-function findMainTwb(workingDir: string): string {
-  const stack = [workingDir];
-  while (stack.length) {
-    const dir = stack.pop()!;
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) stack.push(full);
-      else if (entry.name.toLowerCase().endsWith(".twb")) return full;
-    }
-  }
-  throw new Error(`No .twb under ${workingDir}`);
-}
-
 async function main() {
   const repoRoot = repoRootFrom(import.meta.url);
   const patchPath = parsePatchArg(process.argv.slice(2));
   const { patch, workingDir } = loadPatch(patchPath, repoRoot);
 
-  const mainTwb = findMainTwb(workingDir);
+  const mainTwb = findTwb(workingDir);
+  if (!mainTwb) throw new Error(`No .twb under ${workingDir}`);
   const xml = fs.readFileSync(mainTwb, "utf8");
 
   const issues: Issue[] = [];

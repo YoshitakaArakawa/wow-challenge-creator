@@ -2,30 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import axios from "axios";
 import { repoRootFrom } from "./lib/paths.js";
-
-interface VersionFile {
-  _comment?: string;
-  repo: string;
-  sha: string | null;
-  tag: string | null;
-  last_checked: string | null;
-  last_updated: string | null;
-  files: string[];
-}
-
-const REPO_API = "https://api.github.com/repos/tableau/tableau-document-schemas";
-
-function versionFilePath(repoRoot: string): string {
-  return path.join(
-    repoRoot,
-    ".claude",
-    "skills",
-    "create-workbook",
-    "references",
-    "schemas",
-    ".version",
-  );
-}
+import { REPO_API, loadVersion, saveVersion, versionFilePath } from "./lib/schema-version.js";
 
 function schemasDir(repoRoot: string): string {
   return path.dirname(versionFilePath(repoRoot));
@@ -92,9 +69,7 @@ async function main() {
   const versionPath = versionFilePath(repoRoot);
   // .version is a local cache (gitignored); a fresh clone has neither it nor the schemas dir.
   fs.mkdirSync(dir, { recursive: true });
-  const current: VersionFile = fs.existsSync(versionPath)
-    ? (JSON.parse(fs.readFileSync(versionPath, "utf8")) as VersionFile)
-    : { repo: "tableau/tableau-document-schemas", sha: null, tag: null, last_checked: null, last_updated: null, files: [] };
+  const current = loadVersion(versionPath);
 
   const args = parseArgs(process.argv.slice(2));
   const target = args.sha ? { sha: args.sha, tag: args.tag ?? null } : await resolveLatestSha();
@@ -124,7 +99,7 @@ async function main() {
   current.last_updated = new Date().toISOString();
   current.last_checked = current.last_updated;
   current.files = written;
-  fs.writeFileSync(versionPath, JSON.stringify(current, null, 2) + "\n");
+  saveVersion(versionPath, current);
 
   process.stdout.write(
     JSON.stringify(

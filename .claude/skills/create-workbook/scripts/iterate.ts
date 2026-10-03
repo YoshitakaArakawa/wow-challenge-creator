@@ -14,7 +14,7 @@
  * compare.html reads compare-data.js through a <script> tag, so it works when opened as a local file
  * (file://), where fetch() is blocked.
  *
- * --patch additionally runs validate-twb.ts (field-reference checks against the generation patch).
+ * --patch additionally runs validate-twb.ts (required elements, a <window> per sheet in the patch, duplicate calc captions).
  * --compare-only rewrites compare.html / compare-data.js and stops (e.g. after adding a draft HTML).
  */
 import fs from "node:fs";
@@ -22,7 +22,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { XMLValidator } from "fast-xml-parser";
-import { unzip, zipDirectory } from "./lib/zip-tools.js";
+import { findTwb, unzip, zipDirectory } from "./lib/zip-tools.js";
 import { repoRootFrom } from "./lib/paths.js";
 
 const REFINE_DIR_NAME = "refine";
@@ -90,19 +90,6 @@ function writeCompare(refineDir: string, compareTemplate: string): void {
   fs.writeFileSync(path.join(refineDir, COMPARE_DATA), `window.COMPARE_DATA = ${JSON.stringify(data, null, 2)};\n`);
 }
 
-function findTwb(dir: string): string | null {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      const found = findTwb(full);
-      if (found) return found;
-    } else if (entry.name.toLowerCase().endsWith(".twb")) {
-      return full;
-    }
-  }
-  return null;
-}
-
 function main() {
   const argv = process.argv.slice(2);
   const repoRoot = repoRootFrom(import.meta.url);
@@ -154,8 +141,8 @@ function main() {
     try {
       const parsed = JSON.parse(v.stdout);
       ok = parsed.ok !== false;
-      const errors = (parsed.issues ?? []).filter((i: { level: string }) => i.level === "error");
-      validateSummary = errors.length ? errors.map((e: { message: string }) => e.message).join(" | ") : "no errors";
+      const errors: Array<{ message: string }> = parsed.errors ?? [];
+      validateSummary = errors.length ? errors.map((e) => e.message).join(" | ") : "no errors";
     } catch {
       validateSummary = (v.stderr || v.stdout).trim();
     }
