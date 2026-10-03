@@ -49,7 +49,7 @@ python .claude/skills/publish-to-cloud/scripts/tableau_auth.py login
 1. **出題フォルダの作成** - `outputs/YYYY-MM-DD-theme-name/`
 2. **ブレスト** (`brainstorm`) - 直近の出題との重複チェック、ヒアリング、アイデア展開
 3. **要件作成** (`create-requirements`) - 英語+日本語の要件文。任意で HTML プロトタイプ
-4. **ワークブック生成** (`create-workbook`) - テンプレ差分編集 + チャートレシピで .twbx を生成
+4. **ワークブック生成** (`create-workbook`) - テンプレに計算フィールドを投入し、TWB を直接編集して .twbx を生成
 5. **Cloud パブリッシュ** (`publish-to-cloud`) - Tableau Cloud にアップロード
 6. **X 投稿文の作成** (`create-x-post`) - Cloud URL を含めた告知文
 
@@ -62,7 +62,7 @@ python .claude/skills/publish-to-cloud/scripts/tableau_auth.py login
   brainstorm/          # アイデア発想・重複チェック
   analyze-twbx/        # TWBX解析 (ローカル / Tableau Public / Tableau Cloud)
   create-requirements/ # 要件文 + プロトタイプHTML
-  create-workbook/     # .twbx 生成 (テンプレ差分 + チャートレシピ)
+  create-workbook/     # .twbx 生成 (テンプレ差分 + TWB 直接編集)
   publish-to-cloud/    # Tableau Cloud パブリッシュ
   create-x-post/       # X (Twitter) 投稿文
   search-tableau-features/    # Tableau Desktop 機能検索（キャッシュ付き）

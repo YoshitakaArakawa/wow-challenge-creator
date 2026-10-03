@@ -40,9 +40,8 @@ export interface CalculatedFieldSpec {
 
 export interface WorksheetSpec {
   name: string;
-  recipe?: string;
-  params?: Record<string, string>;
-  rawXml?: string;
+  /** Complete `<worksheet name='...'>...</worksheet>` element. */
+  rawXml: string;
 }
 
 export interface DashboardSpec {

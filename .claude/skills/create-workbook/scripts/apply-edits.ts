@@ -11,48 +11,9 @@ import {
   insertWorksheets,
   insertDashboards,
   insertWindows,
-  renderRecipe,
-  isolateWorksheetBlock,
   renderDashboard,
 } from "./lib/twb-edit.js";
 import { repoRootFrom, parsePatchArg, loadPatch } from "./lib/paths.js";
-import { WorksheetSpec } from "./lib/patch-types.js";
-
-function loadRecipe(recipeName: string, repoRoot: string): string {
-  const recipePath = path.join(
-    repoRoot,
-    ".claude",
-    "skills",
-    "create-workbook",
-    "references",
-    "chart-recipes",
-    `${recipeName}.xml`,
-  );
-  if (!fs.existsSync(recipePath)) {
-    throw new Error(`Recipe not found: ${recipePath}`);
-  }
-  return fs.readFileSync(recipePath, "utf8");
-}
-
-function buildWorksheetXml(spec: WorksheetSpec, repoRoot: string, primaryDsName: string): string {
-  if (spec.rawXml) {
-    return spec.rawXml;
-  }
-  if (!spec.recipe) {
-    throw new Error(`Worksheet "${spec.name}" has neither recipe nor rawXml`);
-  }
-  const template = loadRecipe(spec.recipe, repoRoot);
-  const params = {
-    SHEET_NAME: spec.name,
-    DATASOURCE_NAME: primaryDsName,
-    ...(spec.params ?? {}),
-  };
-  if (!params["DATASOURCE_NAME"]) {
-    throw new Error(`Worksheet "${spec.name}" missing DATASOURCE_NAME`);
-  }
-  const rendered = renderRecipe(template, params);
-  return isolateWorksheetBlock(rendered);
-}
 
 async function main() {
   const repoRoot = repoRootFrom(import.meta.url);
@@ -92,7 +53,8 @@ async function main() {
 
   const worksheetBlocks: string[] = [];
   for (const ws of patch.worksheets ?? []) {
-    worksheetBlocks.push(buildWorksheetXml(ws, repoRoot, primary.name));
+    if (!ws.rawXml) throw new Error(`Worksheet "${ws.name}" has no rawXml`);
+    worksheetBlocks.push(ws.rawXml);
   }
   if (worksheetBlocks.length) xml = insertWorksheets(xml, worksheetBlocks);
 

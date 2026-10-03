@@ -16,7 +16,7 @@ note: 式の書き方だけを扱う。XML の骨格は twb-skeleton-cheatsheet.
 - カラー条件分岐
 - TWB XMLエスケープのリマインド
 
-create-workbook の `calculatedFields` パッチに書く `formula` を組み立てる際の参考。
+create-workbook の `calculatedFields` パッチに書く `formula` を組み立てる際の参考。例は読みやすさのため、計算フィールドをキャプション（`[Weeks Ago]` など）で書いている。パッチや TWB に書くときは、計算フィールドへの参照を内部名（`[Calculation_003]` など）に置き換える。
 
 ## 基本パターン
 

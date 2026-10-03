@@ -2,7 +2,7 @@
   "name": "create-workbook-scripts",
   "private": true,
   "version": "0.1.0",
-  "description": "Hybrid TWB/TWBX generator (template diff + recipe insertion + local schema-driven).",
+  "description": "TWB/TWBX generator: template diff via a patch JSON, then direct TWB edits in the refine loop.",
   "scripts": {
     "unpack": "tsx unpack-template.ts",
     "apply": "tsx apply-edits.ts",

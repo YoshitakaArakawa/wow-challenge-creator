@@ -2,7 +2,7 @@
 purpose: TWB (.twb) XML の骨格と、計算フィールド・パラメータ・ワークシート・ダッシュボード・ウィンドウの最小の書き方
 fetched_at: 2026-05-12
 source_last_known_update: 不明
-note: rawXml でシートやダッシュボードを書くときの骨格だけを扱う。式の書き方は calc-field-patterns.md、Desktop で失敗する落とし穴は twb-pitfalls.md が担当する。バージョン 2026.1 以降を想定。
+note: TWB を直接編集してシートやダッシュボードを書くときの骨格だけを扱う。式の書き方は calc-field-patterns.md、Desktop で失敗する落とし穴は twb-pitfalls.md が担当する。例の属性値はテンプレ（source-build 2025.1.2、version 18.1）に合わせている。
 ---
 
 # TWB XML骨格チートシート
@@ -20,12 +20,12 @@ note: rawXml でシートやダッシュボードを書くときの骨格だけ�
 
 ```xml
 <?xml version='1.0' encoding='utf-8' ?>
-<workbook source-build='YYYY.RR.x ...' source-platform='win' version='2026.1' xml:base='...' xmlns:user='...'>
+<workbook original-version='18.1' source-build='2025.1.2 (...)' source-platform='win' version='18.1' xmlns:user='...'>
   <document-format-change-manifest>...</document-format-change-manifest>
   <preferences>...</preferences>
   <datasources>
     <datasource name='Parameters' ...>...</datasource>
-    <datasource caption='Sample - Superstore' name='federated.xxxxx' ...>...</datasource>
+    <datasource caption='Orders (Sample - Superstore)' name='federated.xxxxx' ...>...</datasource>
   </datasources>
   <worksheets>
     <worksheet name='Sheet 1'>...</worksheet>
@@ -38,8 +38,10 @@ note: rawXml でシートやダッシュボードを書くときの骨格だけ�
 ```
 
 **重要**:
-- データソース名 `federated.xxxxx` の `xxxxx` は実テンプレで確認すること（apply-edits.ts は `<datasource caption='Sample - Superstore'>` を検索）
-- パラメータは独立した `<datasource name='Parameters'>` 配下に置く（通常のデータソースとは別）
+- `<workbook>` の属性はテンプレのまま変えない。新しい属性を使えるかは `source-build` で決まる（twb-pitfalls.md の「Desktop に拒否される属性」）
+- データソース名 `federated.xxxxx` の `xxxxx` は `apply-edits.ts` の出力（`primaryDatasource.name`）で確認する。`apply-edits.ts` は `Parameters` 以外で最初のデータソースを主データソースとして扱う
+- パラメータは独立した `<datasource name='Parameters'>` 配下に置く（通常のデータソースとは別）。現行テンプレにはこのデータソースが無い
+- テンプレには `<worksheet name='Sheet 1'>` と `<dashboard name='Goal'>`、それぞれの `<window>` が入っている。解答ワークブックでは削除する
 
 ## 計算フィールド (`<column>`)
 
@@ -67,7 +69,7 @@ note: rawXml でシートやダッシュボードを書くときの骨格だけ�
 ```
 
 ### 重要な属性
-- `name`: 内部ID。`[Calculation_NNN]` の形式が標準。apply-edits.ts が衝突しない採番をする
+- `name`: 内部ID。`[Calculation_NNN]` の形式が標準。apply-edits.ts は `001` からパッチの並び順に振る（既存の ID との衝突は確かめない。現行テンプレに計算フィールドは無い）。式の中や `<column-instance>` から計算フィールドを指すときは、キャプションではなくこの内部名を使う
 - `caption`: 表示名（ユーザー可視）
 - `datatype`: `integer` / `real` / `string` / `boolean` / `date` / `datetime`
 - `role`: `measure` / `dimension`
@@ -76,7 +78,22 @@ note: rawXml でシートやダッシュボードを書くときの骨格だけ�
 
 ## パラメータ
 
-`<datasource name='Parameters'>` 配下に `<column>` を追加。
+`<datasource name='Parameters'>` 配下に `<column>` を追加。内部名は `[Parameter 1]` から連番にし、式やゾーンからは `[Parameters].[Parameter 1]` で指す。
+
+現行テンプレには `Parameters` データソースが無いので、`<datasources>` の最初の子として足す:
+
+```xml
+<datasources>
+  <datasource hasconnection='false' inline='true' name='Parameters' version='18.1'>
+    <aliases enabled='yes' />
+    <column caption='Select a Week' datatype='date' name='[Parameter 1]' param-domain-type='list' role='measure' type='quantitative' value='#2026-08-09#'>
+      <calculation class='tableau' formula='#2026-08-09#' />
+    </column>
+  </datasource>
+  <datasource caption='Orders (Sample - Superstore)' name='federated.xxxxx' ...>
+```
+
+パラメータを参照するシートは、`<view>` の `<datasources>` と `<datasource-dependencies datasource='Parameters'>` にも `Parameters` を書く。
 
 ### リスト型パラメータ
 ```xml

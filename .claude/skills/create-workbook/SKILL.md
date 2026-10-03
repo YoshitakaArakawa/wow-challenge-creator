@@ -5,22 +5,26 @@ description: 要件文を元にTableauワークブック(.twbx)を生成する�
 
 # Tableauワークブック生成スキル
 
-要件文（`requirements-en.md`）とプロトタイプ（任意 `prototype/*.html`）を入力に、`common/WOW Challenge Template (Save a copy) .twbx` をベースに差分編集で `.twbx` を生成する。
+要件文（`requirements-en.md`）とプロトタイプ（任意 `prototype/*.html`）を入力に、`common/WOW Challenge Template (Save a copy) .twbx` をベースに `.twbx` を組み立てる。
 
 ## 設計の原則
 
-**ハイブリッド戦略**（3層）:
-1. **テンプレ流用**: `<workbook>` ルート、データソース、フォント等はテンプレ由来を温存
-2. **レシピ挿入**: 計算フィールド、パラメータ、参照線、デュアル軸など定型は [references/chart-recipes/](references/chart-recipes/) のXMLテンプレを差し替え挿入
-3. **局所スキーマ駆動**: 新規ワークシート全体は [references/twb-skeleton-cheatsheet.md](references/twb-skeleton-cheatsheet.md) と、版に合うXSD（[scripts/vendor/tableau-plugin/resources/schemas/](scripts/vendor/tableau-plugin/resources/schemas/)）を参照してXMLを書く。参照線・デュアル軸・パラメータ・LOD・フィルタ・ダッシュボードなどの構文は、書く前に [scripts/vendor/tableau-plugin/resources/examples/](scripts/vendor/tableau-plugin/resources/examples/) の同名 JSON で要素の置き場所と属性を確認する（JSON は XML を抽象化した表記。属性名は XSD 検証で確かめる）
+**2 段階で組み立てる**:
+1. **足場はパッチ JSON で作る**: テンプレの展開と、計算フィールドの一括投入（フォルダ分け込み）は `apply-edits.ts` が決定論的に行う。式の XML エスケープと改行の変換を任せられる
+2. **シートとダッシュボードは `refine/wb-build/` の TWB を直接編集して作る**: パラメータ、Pivot、色の割り当て、横並びや固定高さのダッシュボードはパッチで表せない。足場ができたら、以後は TWB を直接編集する
 
-**ClaudeにTWB XMLを直書きさせず、パッチJSONを介する**。`apply-edits.ts` がパッチを決定論的にXMLに反映する。
+テンプレ由来の `<workbook>` ルート、データソース接続、フォントは温存する。
+
+直接編集で XML を書くときの参照先:
+- 骨格: [references/twb-skeleton-cheatsheet.md](references/twb-skeleton-cheatsheet.md)
+- 構文の置き場所と属性: [scripts/vendor/tableau-plugin/resources/examples/](scripts/vendor/tableau-plugin/resources/examples/) の同名 JSON（XML を抽象化した表記。属性名は XSD 検証で確かめる）と、版に合う XSD（[scripts/vendor/tableau-plugin/resources/schemas/](scripts/vendor/tableau-plugin/resources/schemas/)）
+- Desktop で失敗する書き方: [references/twb-pitfalls.md](references/twb-pitfalls.md)
 
 ### 参加者が再現できる規模にする
 
 WOW の解答は人間が作り直すもの。動くだけでなく、熟練の Tableau 作者が自然に選ぶ作り方にする。
 
-- 計算フィールドは 1 判定あたり 5 前後、全体で 25 以内を目安にする。超えたらフィールドを削る前に構造を疑う
+- 計算フィールドが増えすぎたら、フィールドを削る前に構造を疑う。目安は、答えを 1 つ出すのに 5 前後、全体で 25 以内（出題の規模で前後する）
 - 平均線と「平均 ± n SD」の帯はアナリティクスペイン相当の参照線で描き、フィールドにしない（書き方は [references/twb-pitfalls.md](references/twb-pitfalls.md) の「マークとシェルフ」）
 - 指標が複数あるときは、データソースで Pivot して 1 組の計算でまかなう。Measure Names は計算式で参照できず、パラメータ切替は同時表示できない
 - 文字列の色分けは 1 色 1 フィールドかかる。記号（✓ ✕ ⚠）で代替できないか先に検討する
@@ -49,44 +53,52 @@ npx tsx .claude/skills/create-workbook/scripts/check-schema-updates.ts
 24時間キャッシュあり。更新があればリリースノートを表示し、ユーザー判断で `update-schemas.ts` 実行。
 
 ### Step 3: パッチJSONの起案
-要件から次を抽出して `outputs/{theme}/tmp/workbook-patch.json` に書き出す（フォーマットは [パッチJSON仕様](#パッチJSON仕様) 参照）:
-- 計算フィールド一覧
-- パラメータ一覧
-- シート構成（recipe名 or rawXml）
-- ダッシュボード配置
+要件から計算フィールドの一覧を抽出し、`outputs/{theme}/tmp/workbook-patch.json` に書き出す（フォーマットは [パッチJSON仕様](#パッチJSON仕様) 参照）。
 
-起案前に [references/twb-pitfalls.md](references/twb-pitfalls.md) を読み、文字列の引用符・数値書式・色の割り当て・計算フィールドのフォルダ分けを規範どおりにする。
+起案前に [references/twb-pitfalls.md](references/twb-pitfalls.md) を読み、文字列の引用符・数値書式・計算フィールドのフォルダ分けを規範どおりにする。式の中で別の計算フィールドを指すときは、キャプションではなく内部名で書く。内部名はパッチの並び順に `[Calculation_001]` から振られるので、参照される側を先に並べ、順番から内部名を決める。パラメータは `[Parameters].[Parameter 1]` の形で指す。
 
 書き出したらユーザーにレビューしてもらう。
 
-### Step 4: 適用 → 検証 → 生成
+### Step 4: 足場の生成 → 直接編集 → 検証
 
 ```bash
 SKILL=".claude/skills/create-workbook"
 THEME_DIR="outputs/2026-MM-DD-theme"
 PATCH="$THEME_DIR/tmp/workbook-patch.json"
 
-# 1. テンプレTWBXを作業ディレクトリに展開
+# 1. テンプレTWBXを作業ディレクトリ (refine/wb-build) に展開
 npx tsx $SKILL/scripts/unpack-template.ts --patch "$PATCH"
 
-# 2. パッチをTWB XMLに適用
+# 2. パッチをTWB XMLに適用 (出力の calcIdMap がキャプション → 内部名の対応表)
 npx tsx $SKILL/scripts/apply-edits.ts --patch "$PATCH"
+```
 
-# 3. 検証 (XML well-formed + 必須要素 + シートごとの <window> + キャプション重複)
+`unpack-template.ts` は `refine/wb-build/` を消してから展開し直す。直接編集を始めた後に再実行すると、その編集はすべて失われる。計算フィールドを後から足すときは、パッチに戻らず TWB に直接足す。
+
+続けて `refine/wb-build/*.twb` を直接編集する:
+
+1. テンプレの残り物を消す。`<worksheet name='Sheet 1'>`、`<dashboard name='Goal'>`（過去の出題の画像を載せたもの）と、それぞれの `<window>` を削除する
+2. パラメータが要るなら `Parameters` データソースを足す。Pivot が要るなら relation を書き換える（どちらも現行テンプレには無い。書き方は cheatsheet と pitfalls）
+3. シート、ダッシュボード、`<window>` を書く。XML 内で計算フィールドを指すときは、キャプションではなく `calcIdMap` の内部名（`[Calculation_001]`）を使う
+
+編集したら検証して `.twbx` にまとめる:
+
+```bash
+# 3. 検証 (XML well-formed + 必須要素 + キャプション重複)
 npx tsx $SKILL/scripts/validate-twb.ts --patch "$PATCH"
 
-# 3b. XSD検証 (source-build に合う版の公式XSDを自動選択。要 lxml)
-python $SKILL/scripts/vendor/tableau-plugin/scripts/validate_workbook.py "$THEME_DIR/refine/wb-build/<name>.twb"
+# 4. XSD検証 (source-build に合う版の公式XSDを自動選択。要 lxml)
+python $SKILL/scripts/vendor/tableau-plugin/scripts/validate_workbook.py "$THEME_DIR/refine/wb-build/<テンプレ由来の名前>.twb"
 
-# 4. TWBX (ZIP) に再パッケージ
+# 5. TWBX (ZIP) に再パッケージ
 npx tsx $SKILL/scripts/repack-twbx.ts --patch "$PATCH"
 ```
 
-検証（上の 3・3b）で失敗したら、エラーメッセージを元にパッチJSONを修正し再実行（最大3回ループ）。
+検証で失敗したら、エラーメッセージを元に TWB を直して再実行する。
 
 XSD検証の結果は「構造が正しい」までで、Desktop で開けることは保証しない：
 - 計算式・フィールド参照・データソース接続は検証対象外
-- XSD を通っても Desktop が拒否する属性があり、逆に XSD が要求しても Desktop が拒否する要素もある。Desktop で開けるならその XSD エラーは無視する。既知の食い違いと、新しい属性を使うときの規範は [references/twb-pitfalls.md](references/twb-pitfalls.md) にある
+- XSD を通っても Desktop が拒否する属性があり、逆に XSD が要求しても Desktop が拒否する要素もある。無視してよい XSD エラーは [references/twb-pitfalls.md](references/twb-pitfalls.md) に載っている食い違いだけ。それ以外のエラーが 3 回直しても残るときは、ユーザーに報告して止まる
 - 構文が分からない要素は推測で書かず、Desktop で同じ操作をして `.twb` に別名保存し、その XML を写す。GitHub のコード検索で見つからないとき（例：動的パラメータ）は、ユーザーに 1 回作って保存してもらうのが速い
 
 ### Step 5: refine ループで表示を詰める
@@ -98,7 +110,7 @@ outputs/{theme}/
   prototype/*.html        ドラフト HTML（create-requirements が作る。gitignore 済み）
   refine/
     YYYYWNN.twbx          作業用かつ publish 対象。テーマ直下には .twbx を置かない
-    refine.html           refine 中に改訂するドラフト HTML。1 ファイルを上書きで育てる（prototype/ からコピーして始める）
+    refine.html           refine 中に改訂するドラフト HTML。1 ファイルを上書きで育てる（prototype/ があればコピーして始め、無ければ新規に作る）
     wb-build/             編集中の TWB（初回に .twbx から展開）
     compare.html          比較ページ（assets/compare.html のコピー。ファイルのまま開く）
     compare-data.js       比較ページが読むドラフト一覧と描画の一覧（iterate.ts が毎回書き直す）
@@ -114,7 +126,9 @@ outputs/{theme}/
 npx tsx $SKILL/scripts/iterate.ts --twbx "$THEME_DIR/refine/2026W40.twbx" [--views "Dashboard"] [--patch "$PATCH"]
 ```
 
-`iterate.ts` は、TWB の整形式チェック → `.twbx` への再梱包 → `publish.py --overwrite --render` を順に行う。`--patch` を付けると `validate-twb.ts`（必須要素・シートごとの `<window>`・キャプション重複）も走る。XSD 検証は含まないので、Step 4 の 3b を通した後に始める。手作業で作った `.twbx` から始めるときは、それを `refine/YYYYWNN.twbx` に置けばよい。
+`iterate.ts` は、TWB の整形式チェック → `.twbx` への再梱包 → `publish.py --overwrite --render` を順に行う。`--patch` を付けると `validate-twb.ts`（必須要素・シートごとの `<window>`・キャプション重複）も走る。XSD 検証は含まないので、Step 4 の XSD 検証を通した後に始める。
+
+`iterate.ts` は `wb-build/` があればそれを正とし、毎回そこから `.twbx` を作り直す。`wb-build/` が無いときだけ `.twbx` を展開する。手作業で作った `.twbx` や Cloud から取得した版から始めるときは、それを `refine/YYYYWNN.twbx` に置き、古い `wb-build/` はユーザーに消してもらってから実行する。
 
 比較ページは `refine/compare.html` をブラウザでファイルのまま開く（サーバー不要）。左にドラフト HTML（`refine/` と `prototype/` の両方から選べる）、右に Cloud の描画 PNG が並ぶ。
 
@@ -131,7 +145,7 @@ npx tsx $SKILL/scripts/iterate.ts --twbx "$THEME_DIR/refine/2026W40.twbx" [--vie
 
 ループの回し方:
 
-1. `refine/wb-build/*.twb` を直接編集する（生成からやり直すならパッチ JSON を直して Step 4 を再実行する）
+1. `refine/wb-build/*.twb` を直接編集する
 2. `iterate.ts` を実行する
 3. `renders[].png` を Read し、要件・ドラフト HTML と比べて差分を列挙する。観点は「空白ゾーン」「期待値との一致」「色・線・折り返し」「`#####` 表示」
 4. 差分があれば 1 に戻る。空白シートや `#####` の原因は [references/twb-pitfalls.md](references/twb-pitfalls.md) で当たる
@@ -156,58 +170,26 @@ Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認
   "baseTemplate": "common/WOW Challenge Template (Save a copy) .twbx",
   "outputPath": "outputs/{theme}/refine/2026W40.twbx",
   "workingDir": "outputs/{theme}/refine/wb-build",
-  "parameters": [
-    {
-      "name": "Date Granularity",
-      "datatype": "string",
-      "domainType": "list",
-      "values": ["Day", "Week", "Month"],
-      "current": "Month"
-    }
-  ],
   "calculatedFields": [
     {
-      "datasource": "federated.0abc",
       "caption": "Profit Ratio",
       "datatype": "real",
       "role": "measure",
       "type": "quantitative",
       "formula": "SUM([Profit])/SUM([Sales])",
+      "defaultFormat": "*+0.0%;-0.0%;0.0%",
       "folder": "2_Stats"
-    }
-  ],
-  "worksheets": [
-    {
-      "name": "KPI Trend",
-      "recipe": "dual-axis",
-      "params": {
-        "DATASOURCE_NAME": "federated.0abc",
-        "FIELD_X": "[Order Date]",
-        "FIELD_Y1": "[Sales]",
-        "FIELD_Y2": "[Profit Ratio]",
-        "COLOR_PRIMARY": "#1f77b4",
-        "COLOR_SECONDARY": "#ff7f0e"
-      }
-    },
-    {
-      "name": "Custom Sheet",
-      "rawXml": "<worksheet name='Custom Sheet'>...</worksheet>"
-    }
-  ],
-  "dashboards": [
-    {
-      "name": "Main",
-      "size": {"width": 1200, "height": 800},
-      "sheets": ["KPI Trend", "Custom Sheet"]
     }
   ]
 }
 ```
 
-- `recipe` は `references/chart-recipes/{recipe}.xml` のファイル名から `.xml` を除いたもの
-- `recipe`/`rawXml` どちらか一方を指定（両方なら `rawXml` 優先）
 - `calculatedFields[].formula` には改行と `//` コメントを書いてよい（TWB では `&#13;&#10;` に変換される）
 - `calculatedFields[].folder` を指定すると、データペインのそのフォルダに入る（`<folders-common>` に追記。同名フォルダがあれば合流）。フォルダの切り方は [references/twb-pitfalls.md](references/twb-pitfalls.md) の「計算フィールドの整理」に従う
+- `calculatedFields[].defaultFormat` は既定の数値書式（省略可）。動作確認済みの書式は twb-pitfalls.md の「数値書式」
+- `calculatedFields[].datasource` は省略する。省略すると、テンプレの主データソース（`Parameters` 以外で最初のもの）に入る
+- 内部名は `[Calculation_001]` からパッチの並び順に振られる。式の中の計算フィールド参照はこの内部名で書く（`apply-edits.ts` はキャプションを内部名に置き換えない）
+- `worksheets[]`（`name` と `rawXml`）と `dashboards[]`（`name`・`size`・`sheets`）も書けるが、ダッシュボードは全シートを縦に等分するだけになる。通常は使わず、直接編集で書く
 - `outputPath` は `outputs/{theme}/refine/YYYYWNN.twbx`（WOW の週番号を 2 桁ゼロ埋め）。Cloud 上のワークブック名はこのファイル名から決まる
 - `workingDir` を省略すると `refine/wb-build` を使う（`iterate.ts` と同じ場所）
 
@@ -218,7 +200,6 @@ Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認
 - [references/twb-pitfalls.md](references/twb-pitfalls.md) — XSDを通ってもDesktopで失敗・表示崩れする原因と回避規範（引用符・書式・色・線・テキスト・レイアウト・フォルダ分け）
 - [references/dashboard-design.md](references/dashboard-design.md) — 色（明るさの 3 段、色は意味にだけ）・見せ場・線の強弱・出題の既定値の選び方と、案を HTML で比べて決める進め方
 - [references/viz-techniques.md](references/viz-techniques.md) — 少ない手順で見た目が良くなる定石（`MIN(1.0)` タイル、二重軸の強調点、別メジャーの参照帯、ラベル設定など）と実証済みの XML
-- [references/chart-recipes/](references/chart-recipes/) — チャート種別ごとのレシピXML（プレースホルダ `{{NAME}}` 形式）
 - `references/schemas/` — Tableau公式XSDの最新スナップショットを置く手元キャッシュ（gitignore対象。新機能の構文を読むときに `update-schemas.ts` で取得）
 - [assets/compare.html](assets/compare.html) — refine ループの比較ページのひな形（`iterate.ts` が `refine/` にコピーし、テンプレートが変われば上書きする）
 - [scripts/vendor/tableau-plugin/](scripts/vendor/tableau-plugin/) — `tableau/tableau-plugin` から取り込んだXSD検証スクリプト・版別XSD（2025.1〜2026.2）・構文例JSON（Apache-2.0。出典は `SOURCE.md`）
@@ -234,7 +215,6 @@ pip install -r vendor/tableau-plugin/scripts/requirements.txt   # XSD検証用�
 
 - **対象外**: Sankey, Radial, Hex Tile, Map, Web Data Connector
 - データソース置換は未対応（パッチの `dataSourceSwap` は未実装）。データソースはテンプレの Sample-Superstore を使う
-- レシピは `bar-chart` / `line-chart` / `dual-axis` の3つのみ。レシピで表せないシートは `rawXml` で渡す
-- `parameters` はテンプレに `<datasource name='Parameters'>` がある場合のみ挿入できる。現行テンプレには無いので、パラメータを使う出題は別途追加する
+- パッチの `parameters` は、TWB に `<datasource name='Parameters'>` がある場合だけ使える。現行テンプレには無いので、パラメータは直接編集で足す（cheatsheet の「パラメータ」）
 - XSD検証は 2025.1 より古い `source-build` のブックを検証できない
 - Tableau Desktop自動検証CLIは存在しない。描画の自動確認は Cloud 経由（Step 5）で行い、Desktop での最終確認は手動（Step 6）
