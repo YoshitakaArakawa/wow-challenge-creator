@@ -12,6 +12,16 @@ Workout Wednesday (WOW) Tableau出題を作成するための支援環境。
 2. **難易度はユーザーが指定** — 問題作成時に確認する
 3. **要件は英語＋日本語** — 英語で作成し、日本語も併記
 
+## ユーザーに開いてもらうもの
+
+ブラウザや Tableau Desktop での表示確認は、ユーザーが自分で開いて行う。Claude はブラウザやデスクトップを自動操作しない（Computer Use・Claude in Chrome・Playwright・組み込みブラウザを使わない）。Claude 自身の確認は、Cloud の描画（PNG・文字の表）、TWB の XML、ヘッドレス Chrome の撮影で行う。
+
+開いてほしいものは、ユーザーがエクスプローラーで探さずに済む形でチャットに出す。
+
+- ローカルのファイル（ドラフト HTML・`refine/compare.html`・`.twbx`）: 既定のアプリで開く 1 行コマンドを、単独のコードブロックで出す。パスはリポジトリ直下からの相対パスで書く（Windows は `start outputs/{theme}/refine/compare.html`、macOS は `open`）
+- Cloud のワークブック: `refine/publish-result.json` の `webpageUrl` をそのまま出す
+- 見てほしい点・してほしい操作を 1 行で添える
+
 ## 参照URL
 
 | 情報 | URL |
@@ -77,7 +87,7 @@ refine/wb-build の TWB 編集 → create-workbook iterate.ts (検証 → repack
 → refine/compare.html でドラフト HTML と Cloud 描画を並べて確認 → フィードバック → TWB 編集 …
 ```
 
-手順と比較ページの開き方は create-workbook Skill の Step 5 に従う。
+手順は create-workbook Skill の Step 5 に従う。
 
 ### 協働ループ (Step 4以降)
 

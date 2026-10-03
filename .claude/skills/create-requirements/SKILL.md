@@ -32,6 +32,7 @@ Vizのレイアウト・線の本数・色分け・BAN配置などを事前に�
 - 出題フォルダの `prototype/` に保存する（例: `prototype/prototype.html`。案が複数なら `prototype-weekly.html` のように並べる）
 - `prototype/` は gitignore 済みで Git には入らない。後工程の比較ページ（create-workbook の refine ループ）がこのフォルダの HTML を一覧する
 - ファイル単体で開けるよう、先頭に `<meta charset="utf-8">` を置く
+- 作ったら、開くコマンドをチャットに出してユーザーに見てもらう（出し方はリポジトリの CLAUDE.md「ユーザーに開いてもらうもの」）
 - Chart.js / vanilla HTML / SVG など軽量な手段で実装
 - 参考: `outputs/2026-03-25-viz-extensions-dashboard/prototype.html`
 - 「プロトを作って」「イメージを見たい」とユーザーから言われた時、または要件確定前に認識合わせが必要そうな場合に提案

@@ -138,14 +138,12 @@ npx tsx $SKILL/scripts/iterate.ts --twbx "$THEME_DIR/refine/2026W40.twbx" [--vie
 
 `iterate.ts` は `wb-build/` があればそれを正とし、毎回そこから `.twbx` を作り直す。`wb-build/` が無いときだけ `.twbx` を展開する。手作業で作った `.twbx` や Cloud から取得した版から始めるときは、それを `refine/YYYYWNN.twbx` に置き、古い `wb-build/` はユーザーに消してもらってから実行する。
 
-比較ページは `refine/compare.html` をブラウザでファイルのまま開く（サーバー不要）。左にドラフト HTML（`refine/` と `prototype/` の両方から選べる）、右に Cloud の描画 PNG が並ぶ。
+比較ページ `refine/compare.html` は、ユーザーがブラウザでファイルのまま開いて見る（サーバー不要）。左にドラフト HTML（`refine/` と `prototype/` の両方から選べる）、右に Cloud の描画 PNG が並ぶ。
 
+- 初回は、比較ページを開くコマンドをチャットに出す（出し方はリポジトリの CLAUDE.md「ユーザーに開いてもらうもの」）。2 回目以降は、開いたままのページで「Reload both」を押してもらう
+- Claude は比較ページを読まない。描画は `render/*.png` と `render/<view>.text.tsv` を直接読む
 - 一覧は `iterate.ts` が書き出す `compare-data.js` から読む。「Reload both」はこのファイルとドラフト・PNG を読み直す
 - ドラフト HTML を足しただけで publish しないときは、`iterate.ts --twbx ... --compare-only` で一覧だけ更新する
-- ユーザーと画面を見ながら進めるときは、このページを Chrome で開いて共有する。Claude in Chrome で読むには次の 2 つが要る
-  - 拡張機能の詳細で「ファイルの URL へのアクセスを許可する」をオンにする。切り替えると拡張機能が再読み込みされ、既存のタブグループは Claude から見えなくなるので、タブグループは作り直す
-  - `navigate` は `file://` を `https://` に書き換えるため使えない。Claude のタブグループに空タブを作り、ユーザーにそのアドレスバーへ file URL を貼ってもらう。以後の読み取り（`get_page_text`・`javascript_tool`・スクリーンショット）は動く
-- Claude Code デスクトップの組み込みブラウザは `file://` を静的スナップショットにするため、`compare-data.js` を読めず空になる。使わない
 
 見せ方の変更（レイアウト・文言・情報の削減）は、TWB より先にドラフト HTML で合意する。HTML は数秒で直せ、publish の待ちがない。`prototype/` の原案は要件段階の記録として残し、改訂は `refine/refine.html` を上書きする。版番号は付けない。HTML では Tableau で再現できる表現だけを使う。高さ不足の `#####` や空白の追加のような機械的な修正は、HTML を挟まず TWB を直す。
 
@@ -158,7 +156,7 @@ npx tsx $SKILL/scripts/iterate.ts --twbx "$THEME_DIR/refine/2026W40.twbx" [--vie
 3. 描画を読み（読み方は下の表）、要件・ドラフト HTML と比べて差分を列挙する。観点は「空白ゾーン」「期待値との一致」「色・線・折り返し」「`#####` 表示」
 4. 差分があれば 1 に戻る。空白シートや `#####` の原因は [references/twb-pitfalls.md](references/twb-pitfalls.md) で当たる
 
-PNG は静止画なので、ツールヒント・パラメータ・ハイライト動作は `webpageUrl` をブラウザで開いて確かめる。
+PNG は静止画なので、ツールヒント・パラメータ・ハイライト動作はユーザーに確かめてもらう。`publish-result.json` の `webpageUrl` をチャットに出し、確かめる操作を 1 行で添える。
 
 描画は、確かめたい内容に合う形で読む。PNG を毎回全体で読む必要はない。
 
@@ -197,9 +195,9 @@ Desktop で開く前に、`requirements-{ja,en}.md` を 1 行ずつ現物と照�
 
 Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認する。Cloud では通るが Desktop が拒否する属性があるため、この確認は省かない。
 
-- 開き直しはユーザーに頼む（Desktop で開いている版は再生成しても更新されない。保存せずに閉じてから開き直す）
+- 開くのも開き直すのもユーザーに頼み、`.twbx` を開くコマンドをチャットに出す（Desktop で開いている版は再生成しても更新されない。保存せずに閉じてから開き直す）
 - Desktop で `refine/YYYYWNN.twbx` に上書き保存しない。`iterate.ts` は毎回 `wb-build` の TWB から作り直すので、その変更は次のラウンドで消える。Desktop での変更は `tmp/` に別名で保存し、XML を写して `wb-build` に反映する
-- Computer Use で Desktop を操作すると、Windows の入力パネル（`textinputhost.exe`）が前面を奪い、クリックがすべて拒否されることがある。数十秒で済む単発の操作（書式を 1 つ変えて別名保存する等）はユーザーに頼む
+- Desktop での操作（書式を 1 つ変えて別名保存する等）はユーザーに頼む。頼むときは操作を 1 行で書く
 - Tableau Public に出す版では、ダッシュボードに載せたワークシートを非表示にする。XML ではそのシートの `<window class='worksheet'>` に `hidden='true'` を付ける（Desktop ではダッシュボードのタブの右クリックから「すべてのシートを非表示」）
 - 問題なければ Step 5 の最後の publish が公開版になる。`refine/publish-result.json` の `webpageUrl` を次の `create-x-post` が読む
 
