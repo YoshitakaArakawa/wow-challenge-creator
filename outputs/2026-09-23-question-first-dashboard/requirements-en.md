@@ -9,7 +9,7 @@ So this week, we'll take one week of Superstore and answer four shared questions
 ## Requirements
 
 - Dashboard size: 420 x 1000 px (designed for a phone, scrolling vertically)
-- 8 sheets (4 charts, 1 for the answer tiles, 1 for the header line (week and count), 2 for the KPI cards)
+- 7 sheets (4 charts, 1 for the answer tiles, 2 for the KPI cards)
 - Data: Sample - Superstore-2026.xlsx from the WOW data repository
 - On the Data Source page, pivot Sales and Profit into a Metric / Value pair so that one set of calculations serves both metrics
 - Weeks start on Sunday
@@ -19,9 +19,7 @@ So this week, we'll take one week of Superstore and answer four shared questions
   - Was it better than the same time last year? Compare with the same 13 weeks last year: the latest 13 weeks (this week included) shifted back 52 weeks. 52 weeks is 364 days, so the weekdays line up
 - Answer Yes if this week is at or above the comparison average, otherwise No
 - Define the expected range as the comparison average ± 1 sample standard deviation
-- In the header, show:
-  - The selected week and how many questions are outside their range
-  - The four Yes / No answers as 2 x 2 tiles (questions as rows, Sales and Profit as columns). Color each tile by where this week sits: above the range, at or above the average, below the average, or below the range. Add ▲ / ▼ to the answers outside the range
+- In the header, show the four Yes / No answers as 2 x 2 tiles (questions as rows, Sales and Profit as columns). Color each tile by where this week sits: above the range, at or above the average, below the average, or below the range. Add ▲ / ▼ to the answers outside the range
 - In each row, add a KPI card per metric: this week's value and the $ gap from the average. Only when this week is outside the range, add how far it is above the upper bound or below the lower bound, with ▲ / ▼.
 - Row 1 charts: bars for the previous 13 weeks with the range band and the average line (the Analytics pane is enough). Stop the average line before this week. Set this week's bar slightly apart and color it like the tiles
 - Row 2 charts: lines for this year's latest 13 weeks and last year's same 13 weeks, with last year's average line and range band. Keep this year's line in front, and highlight this week as a circle colored like the tiles
@@ -38,7 +36,7 @@ So this week, we'll take one week of Superstore and answer four shared questions
 <h2>Requirements</h2>
 <ul>
 <li>Dashboard size: 420 x 1000 px (designed for a phone, scrolling vertically)</li>
-<li>8 sheets (4 charts, 1 for the answer tiles, 1 for the header line (week and count), 2 for the KPI cards)</li>
+<li>7 sheets (4 charts, 1 for the answer tiles, 2 for the KPI cards)</li>
 <li>Data: Sample - Superstore-2026.xlsx from the WOW data repository</li>
 <li>On the Data Source page, pivot Sales and Profit into a Metric / Value pair so that one set of calculations serves both metrics</li>
 <li>Weeks start on Sunday</li>
@@ -51,12 +49,7 @@ So this week, we'll take one week of Superstore and answer four shared questions
 </li>
 <li>Answer Yes if this week is at or above the comparison average, otherwise No</li>
 <li>Define the expected range as the comparison average ± 1 sample standard deviation</li>
-<li>In the header, show:
-<ul>
-<li>The selected week and how many questions are outside their range</li>
-<li>The four Yes / No answers as 2 x 2 tiles (questions as rows, Sales and Profit as columns). Color each tile by where this week sits: above the range, at or above the average, below the average, or below the range. Add ▲ / ▼ to the answers outside the range</li>
-</ul>
-</li>
+<li>In the header, show the four Yes / No answers as 2 x 2 tiles (questions as rows, Sales and Profit as columns). Color each tile by where this week sits: above the range, at or above the average, below the average, or below the range. Add ▲ / ▼ to the answers outside the range</li>
 <li>In each row, add a KPI card per metric: this week's value and the $ gap from the average. Only when this week is outside the range, add how far it is above the upper bound or below the lower bound, with ▲ / ▼.</li>
 <li>Row 1 charts: bars for the previous 13 weeks with the range band and the average line (the Analytics pane is enough). Stop the average line before this week. Set this week's bar slightly apart and color it like the tiles</li>
 <li>Row 2 charts: lines for this year's latest 13 weeks and last year's same 13 weeks, with last year's average line and range band. Keep this year's line in front, and highlight this week as a circle colored like the tiles</li>
