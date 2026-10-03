@@ -17,7 +17,7 @@ description: WOW出題の公開告知用X(Twitter)投稿文を作成する。280
 | ファイル | 用途 |
 |---|---|
 | `outputs/{theme}/requirements-en.md` | テーマ・難易度・特徴を把握 |
-| `outputs/{theme}/refine/publish-result.json` | publish-to-cloud が出力。`webpage_url` を埋め込む（あれば） |
+| `outputs/{theme}/refine/publish-result.json` | publish-to-cloud が出力。`webpageUrl` を埋め込む（あれば） |
 | WOW公式サイトURL | サイト掲載後はそちらを優先 |
 
 ## トーン・表現ガイド

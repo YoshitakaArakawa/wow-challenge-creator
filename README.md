@@ -17,7 +17,29 @@
 ```bash
 git clone https://github.com/YoshitakaArakawa/wow-challenge-creator.git
 cd wow-challenge-creator
-cp .env.example .env   # Tableau Cloud 認証情報を埋める
+cp .env.example .env   # Tableau Cloud の URL・サイト・投稿先プロジェクトを埋める
+```
+
+各 Skill のスクリプトは初回のみ依存のインストールが必要。
+
+```bash
+# analyze-twbx
+cd .claude/skills/analyze-twbx/scripts/twbx && npm install
+cd ../tableau-public && npm install
+cd ../cloud && npm install
+
+# create-workbook
+cd .claude/skills/create-workbook/scripts && npm install
+pip install -r vendor/tableau-plugin/scripts/requirements.txt   # XSD 検証用の lxml
+
+# publish-to-cloud
+cd .claude/skills/publish-to-cloud/scripts && pip install -r requirements.txt
+```
+
+Tableau Cloud の認証は OAuth のブラウザサインイン。`.env` にトークンは置かない（PAT を使う場合のみ `TABLEAU_PAT_NAME` / `TABLEAU_PAT_VALUE` を設定する）。
+
+```bash
+python .claude/skills/publish-to-cloud/scripts/tableau_auth.py login
 ```
 
 ## 使い方
@@ -44,8 +66,8 @@ cp .env.example .env   # Tableau Cloud 認証情報を埋める
   publish-to-cloud/    # Tableau Cloud パブリッシュ
   create-x-post/       # X (Twitter) 投稿文
   search-tableau-features/    # Tableau Desktop 機能検索（キャッシュ付き）
-common/                # 共通アセット (テンプレートTWBX、サンプルデータ)
-outputs/               # 出題フォルダ（gitignore対象）
+common/                # 共通アセット (テンプレートTWBX、サンプルデータ。gitignore対象で、手元に配置する)
+outputs/               # 出題フォルダ（Markdown と x-post.txt を追跡。prototype/・refine/・tmp/ は gitignore対象）
 examples/              # 出題例（WOW2026 W12: https://www.workout-wednesday.com/2026w12tab/）
 ```
 

@@ -68,17 +68,3 @@ npx tsx .claude/skills/analyze-twbx/scripts/cloud/download-from-cloud.ts \
 ダウンロードした .twbx は `outputs/{theme}/tmp/cloud-pulled.twbx` に保存される。以降は経路1の手順で解析できる。
 
 初回のみ `cd .claude/skills/analyze-twbx/scripts/cloud && npm install`。
-
-## ツール一覧（参考）
-
-| スクリプト | 用途 |
-|---|---|
-| `scripts/twbx/download.ts` | Tableau Public からTWBXダウンロード |
-| `scripts/twbx/unpack.ts` | .twbx (ZIP) 展開 |
-| `scripts/twbx/structure.ts` | データソース・シート・ダッシュボード一覧 |
-| `scripts/twbx/calculated-fields.ts` | 計算フィールド抽出 |
-| `scripts/twbx/dependencies.ts` | フィールド依存グラフ |
-| `scripts/twbx/lod-expressions.ts` | FIXED/INCLUDE/EXCLUDE 抽出 |
-| `scripts/tableau-public/screenshot.ts` | 静的画像API でPNG取得 |
-| `scripts/cloud/list-workbooks.ts` | Cloud上のワークブック一覧 |
-| `scripts/cloud/download-from-cloud.ts` | Cloudから .twbx 取得 |

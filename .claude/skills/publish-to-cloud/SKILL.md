@@ -72,6 +72,8 @@ python .claude/skills/publish-to-cloud/scripts/publish.py \
   "webpageUrl": "https://example.online.tableau.com/#/site/.../workbooks/...",
   "createdAt": "2026-10-01T...Z",
   "overwrote": false,
+  "backupPath": null,
+  "source": "outputs/{theme}/refine/2026W40.twbx",
   "renders": [
     {"viewName": "Dashboard", "viewId": "...", "filePath": "outputs/{theme}/refine/render/Dashboard.png"}
   ]
@@ -82,16 +84,7 @@ python .claude/skills/publish-to-cloud/scripts/publish.py \
 
 ## 編集 → publish → 確認のループ
 
-Tableau Desktop は開いているワークブックを XML から再読込できない。TWB を直接編集しながら表示を追うときは Cloud を描画エンジンとして使う。
-
-1. `outputs/{theme}/refine/wb-build/*.twb` を編集する
-2. `create-workbook` の `iterate.ts` を実行する（検証 → repack → `publish.py --overwrite --render` を 1 コマンドで行う。手順は create-workbook Skill の Step 5）
-3. `refine/render/*.png` を Read し、要件・プロトタイプと比べて差分を挙げる（比較ページの使い方も create-workbook Skill の Step 5）
-4. 差分があれば 1 へ戻る
-
-PNG で判断できるのはレイアウト・色・数値・空白ゾーン。ツールヒント・パラメータ操作・ハイライト動作は `webpageUrl` をブラウザで開いて確かめる。ブラウザ操作はサブエージェントに委ね、確認観点を 1 行で渡す。
-
-描画は Cloud 側でキャッシュされる。`--render` は最小の `maxAge`（1 分）で取得するので、同じ分内に 2 回 publish すると前回の絵が返ることがある。見た目が変わっていないときは 1 分待って再 publish する。
+TWB を編集しながら表示を追うときは、`publish.py` を直接呼ばず create-workbook Skill の Step 5（`iterate.ts`）で回す。検証 → repack → `publish.py --overwrite --render` を 1 コマンドで行う。ループの回し方と比較ページの使い方もそこにある。
 
 ## 安全策
 
@@ -116,7 +109,7 @@ python .claude/skills/publish-to-cloud/scripts/publish.py \
 | `No cached Tableau Cloud session` / `session expired` | `tableau_auth.py login` を実行し、ブラウザでサインインしてもらう |
 | `signin failed (401)` | PAT 認証時のみ。PAT が失効していないか。Cloudで再発行 |
 | `project not found` | `TABLEAU_PROJECT_NAME` または `--project` が正しいか |
-| `version not supported` | API バージョン不一致。`publish.py` の `--use-server-version` で自動調整される |
-| `--render` の PNG が前回と同じ | Cloud の画像キャッシュ。1 分待って再 publish する |
+| `version not supported` | API バージョン不一致。`publish.py` はサーバーの版に自動で合わせるので、`tableauserverclient` を更新する |
+| `--render` の PNG が前回と同じ | Cloud の画像キャッシュ（`--render` は最小の `maxAge` 1 分で取得する）。1 分待って再 publish する |
 | `views could not be listed` | publish 直後の反映待ち。`publish.py` は 3 秒間隔で 5 回まで待つので、超えたら再実行する |
 | publish は通るが PNG が空白 | Desktop で開いたときも空白になる構文。create-workbook の `references/twb-pitfalls.md` で当たる |

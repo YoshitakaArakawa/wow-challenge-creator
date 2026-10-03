@@ -21,7 +21,7 @@ description: 要件文を元にTableauワークブック(.twbx)を生成する�
 WOW の解答は人間が作り直すもの。動くだけでなく、熟練の Tableau 作者が自然に選ぶ作り方にする。
 
 - 計算フィールドは 1 判定あたり 5 前後、全体で 25 以内を目安にする。超えたらフィールドを削る前に構造を疑う
-- 平均線と「平均 ± n SD」の帯はアナリティクスペイン相当の参照線で描き、フィールドにしない。除外したいマーク（今週など）は別ペインに分ける
+- 平均線と「平均 ± n SD」の帯はアナリティクスペイン相当の参照線で描き、フィールドにしない（書き方は [references/twb-pitfalls.md](references/twb-pitfalls.md) の「マークとシェルフ」）
 - 指標が複数あるときは、データソースで Pivot して 1 組の計算でまかなう。Measure Names は計算式で参照できず、パラメータ切替は同時表示できない
 - 文字列の色分けは 1 色 1 フィールドかかる。記号（✓ ✕ ⚠）で代替できないか先に検討する
 - 各式の先頭に `//` で「なぜ」を 1 行書く。定数（13 週など）は要件で固定ならパラメータにせず、コメントで意味を書く
@@ -37,7 +37,7 @@ WOW の解答は人間が作り直すもの。動くだけでなく、熟練の 
 ### Step 1: 前提確認
 - `outputs/{theme}/requirements-en.md` を読む
 - `outputs/{theme}/prototype/*.html` があれば参照（Vizイメージの認識合わせ）
-- 出題で **Sample-Superstore以外のデータが必要か** を確認（Phase 2: `python/swap_datasource.py`）
+- 出題で **Sample-Superstore以外のデータが必要か** を確認（データソース置換は未対応。[制約・対象外](#制約対象外) 参照）
 
 ### Step 2: スキーマ更新確認（任意）
 新Tableau機能を試したい時など、最新XSDが必要そうなら:
@@ -72,7 +72,7 @@ npx tsx $SKILL/scripts/unpack-template.ts --patch "$PATCH"
 # 2. パッチをTWB XMLに適用
 npx tsx $SKILL/scripts/apply-edits.ts --patch "$PATCH"
 
-# 3. 検証 (XML well-formed + 必須要素 + フィールド参照整合性)
+# 3. 検証 (XML well-formed + 必須要素 + シートごとの <window> + キャプション重複)
 npx tsx $SKILL/scripts/validate-twb.ts --patch "$PATCH"
 
 # 3b. XSD検証 (source-build に合う版の公式XSDを自動選択。要 lxml)
@@ -82,12 +82,11 @@ python $SKILL/scripts/vendor/tableau-plugin/scripts/validate_workbook.py "$THEME
 npx tsx $SKILL/scripts/repack-twbx.ts --patch "$PATCH"
 ```
 
-Step 3・3b で失敗したら、エラーメッセージを元にパッチJSONを修正し再実行（最大3回ループ）。
+検証（上の 3・3b）で失敗したら、エラーメッセージを元にパッチJSONを修正し再実行（最大3回ループ）。
 
 XSD検証の結果は「構造が正しい」までで、Desktop で開けることは保証しない：
 - 計算式・フィールド参照・データソース接続は検証対象外
-- `document-format-change-manifest` の機能フラグに依存する属性（例: パラメータの `period-type-v2`、参照線の `tooltip-type`）は XSD を通っても Desktop で拒否される。新しい属性は、テンプレと同じ `source-build`・同じ manifest を持つ実ブックに現れるものだけを使う
-- 逆に XSD が要求しても Desktop が拒否する要素がある（例: 手動ソートは `<manual-sort>` ではなく `<sort class='manual'>`）。Desktop で開けるならその XSD エラーは無視する。既知の食い違いは [references/twb-pitfalls.md](references/twb-pitfalls.md) にある
+- XSD を通っても Desktop が拒否する属性があり、逆に XSD が要求しても Desktop が拒否する要素もある。Desktop で開けるならその XSD エラーは無視する。既知の食い違いと、新しい属性を使うときの規範は [references/twb-pitfalls.md](references/twb-pitfalls.md) にある
 - 構文が分からない要素は推測で書かず、Desktop で同じ操作をして `.twb` に別名保存し、その XML を写す。GitHub のコード検索で見つからないとき（例：動的パラメータ）は、ユーザーに 1 回作って保存してもらうのが速い
 
 ### Step 5: refine ループで表示を詰める
@@ -106,6 +105,7 @@ outputs/{theme}/
     render/*.png          Cloud の描画
     publish-result.json   publish 結果
     backup/               上書き前の Cloud 版
+    HANDOFF.md            合意した変更の経緯（ドラフトのメモ欄から移す）
 ```
 
 1 ラウンドは次の 1 コマンドで回す:
@@ -114,7 +114,7 @@ outputs/{theme}/
 npx tsx $SKILL/scripts/iterate.ts --twbx "$THEME_DIR/refine/2026W40.twbx" [--views "Dashboard"] [--patch "$PATCH"]
 ```
 
-`iterate.ts` は、TWB の整形式チェック → `.twbx` への再梱包 → `publish.py --overwrite --render` を順に行う。`--patch` を付けると `validate-twb.ts` のフィールド参照チェックも走る。XSD 検証は含まないので、Step 4 の 3b を通した後に始める。手作業で作った `.twbx` から始めるときは、それを `refine/YYYYWNN.twbx` に置けばよい。
+`iterate.ts` は、TWB の整形式チェック → `.twbx` への再梱包 → `publish.py --overwrite --render` を順に行う。`--patch` を付けると `validate-twb.ts`（必須要素・シートごとの `<window>`・キャプション重複）も走る。XSD 検証は含まないので、Step 4 の 3b を通した後に始める。手作業で作った `.twbx` から始めるときは、それを `refine/YYYYWNN.twbx` に置けばよい。
 
 比較ページは `refine/compare.html` をブラウザでファイルのまま開く（サーバー不要）。左にドラフト HTML（`refine/` と `prototype/` の両方から選べる）、右に Cloud の描画 PNG が並ぶ。
 
@@ -156,7 +156,6 @@ Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認
   "baseTemplate": "common/WOW Challenge Template (Save a copy) .twbx",
   "outputPath": "outputs/{theme}/refine/2026W40.twbx",
   "workingDir": "outputs/{theme}/refine/wb-build",
-  "dataSourceSwap": null,
   "parameters": [
     {
       "name": "Date Granularity",
@@ -207,7 +206,6 @@ Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認
 
 - `recipe` は `references/chart-recipes/{recipe}.xml` のファイル名から `.xml` を除いたもの
 - `recipe`/`rawXml` どちらか一方を指定（両方なら `rawXml` 優先）
-- `dataSourceSwap` は Phase 2 で使用、Phase 1 は `null` 固定
 - `calculatedFields[].formula` には改行と `//` コメントを書いてよい（TWB では `&#13;&#10;` に変換される）
 - `calculatedFields[].folder` を指定すると、データペインのそのフォルダに入る（`<folders-common>` に追記。同名フォルダがあれば合流）。フォルダの切り方は [references/twb-pitfalls.md](references/twb-pitfalls.md) の「計算フィールドの整理」に従う
 - `outputPath` は `outputs/{theme}/refine/YYYYWNN.twbx`（WOW の週番号を 2 桁ゼロ埋め）。Cloud 上のワークブック名はこのファイル名から決まる
@@ -235,7 +233,8 @@ pip install -r vendor/tableau-plugin/scripts/requirements.txt   # XSD検証用�
 ## 制約・対象外
 
 - **対象外**: Sankey, Radial, Hex Tile, Map, Web Data Connector
-- **Phase 1 制約**: データソース置換なし（`dataSourceSwap` は未実装）、レシピは `bar-chart` / `line-chart` / `dual-axis` の3つのみ。レシピで表せないシートは `rawXml` で渡す
+- データソース置換は未対応（パッチの `dataSourceSwap` は未実装）。データソースはテンプレの Sample-Superstore を使う
+- レシピは `bar-chart` / `line-chart` / `dual-axis` の3つのみ。レシピで表せないシートは `rawXml` で渡す
 - `parameters` はテンプレに `<datasource name='Parameters'>` がある場合のみ挿入できる。現行テンプレには無いので、パラメータを使う出題は別途追加する
 - XSD検証は 2025.1 より古い `source-build` のブックを検証できない
 - Tableau Desktop自動検証CLIは存在しない。描画の自動確認は Cloud 経由（Step 5）で行い、Desktop での最終確認は手動（Step 6）

@@ -154,14 +154,4 @@ END
 
 ## TWB XMLエスケープのリマインド
 
-formula の中で次を使う場合は XML エンティティでエスケープ:
-
-| Tableau式 | XML埋め込み時 |
-|---|---|
-| `'Day'` | `&apos;Day&apos;` |
-| `"hello"` | `&quot;hello&quot;` |
-| `IF a < b` | `IF a &lt; b` |
-| `a > b` | `a &gt; b` |
-| `a & b` | `a &amp; b` |
-
-apply-edits.ts が自動エスケープするが、`rawXml` モードで直書きする時は手動エスケープが必要。
+パッチ JSON の `formula` は apply-edits.ts が自動エスケープする。`rawXml` で直書きするときだけ手動でエスケープする。対応表は [twb-skeleton-cheatsheet.md](twb-skeleton-cheatsheet.md) の「XMLエンティティエスケープ」。

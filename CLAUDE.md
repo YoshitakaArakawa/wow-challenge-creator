@@ -77,7 +77,7 @@ refine/wb-build の TWB 編集 → create-workbook iterate.ts (検証 → repack
 → refine/compare.html でドラフト HTML と Cloud 描画を並べて確認 → フィードバック → TWB 編集 …
 ```
 
-比較ページ `refine/compare.html` はファイルのまま Chrome で開き、ユーザーと同じ画面を見る（サーバー不要。中身は `iterate.ts` が書く `compare-data.js`）。静止画で判断できない動作（ツールヒント・パラメータ・ハイライト）は Cloud URL を開いて確かめる。
+手順と比較ページの開き方は create-workbook Skill の Step 5 に従う。
 
 ### 協働ループ (Step 4以降)
 
@@ -104,23 +104,8 @@ publish後はユーザーがCloudで微修正することがある。次のル�
 | `refine/backup/{wb}.twbx` | publish-to-cloud (overwrite時) | (ロールバック用) |
 | `x-post.txt` | create-x-post | (最終成果物) |
 
-### 初回セットアップ（依存）
+### 初回セットアップ
 
-各Skillスクリプトは初回のみ依存のインストールが必要。
-
-```bash
-# analyze-twbx
-cd .claude/skills/analyze-twbx/scripts/twbx && npm install
-cd ../tableau-public && npm install
-cd ../cloud && npm install
-
-# create-workbook
-cd .claude/skills/create-workbook/scripts && npm install
-# 初回XSDスナップショット取得 (任意、必要時)
-npx tsx update-schemas.ts
-
-# publish-to-cloud
-cd .claude/skills/publish-to-cloud/scripts && pip install -r requirements.txt
-```
+依存のインストール手順は [README.md](README.md) の「セットアップ」と各 Skill の SKILL.md にある。
 
 `.env` はリポジトリ直下に置き（`.env.example` をコピーして使う）、`publish-to-cloud` と `analyze-twbx` の Cloud経路から参照される。Cloud 認証は OAuth のブラウザサインインで、初回は `python .claude/skills/publish-to-cloud/scripts/tableau_auth.py login` を実行してユーザーにサインインしてもらう。セッションは `.auth-cache/` に保存され両 Skill で共用される。

@@ -1,5 +1,5 @@
 ---
-name: wow-brainstorm
+name: brainstorm
 description: WOW出題のアイデア発想・ブレスト支援。「WOWのアイデアを出して」「ブレストしたい」「何を出題しようか」で使用。
 ---
 

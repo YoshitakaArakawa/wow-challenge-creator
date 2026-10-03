@@ -1,6 +1,20 @@
+---
+purpose: TWB (.twb) XML の骨格と、計算フィールド・パラメータ・ワークシート・ダッシュボード・ウィンドウの最小の書き方
+fetched_at: 2026-05-12
+source_last_known_update: 不明
+note: rawXml でシートやダッシュボードを書くときの骨格だけを扱う。式の書き方は calc-field-patterns.md、Desktop で失敗する落とし穴は twb-pitfalls.md が担当する。バージョン 2026.1 以降を想定。
+---
+
 # TWB XML骨格チートシート
 
-Tableau Workbook (.twb) は XML。バージョン 2026.1 以降を想定。本ドキュメントは create-workbook Skill から参照される。
+## 目次
+- ルート構造
+- 計算フィールド (`<column>`)
+- パラメータ
+- ワークシート
+- ダッシュボード
+- ウィンドウ（必須）
+- XMLエンティティエスケープ
 
 ## ルート構造
 
@@ -158,7 +172,7 @@ Tableau Workbook (.twb) は XML。バージョン 2026.1 以降を想定。本�
 </windows>
 ```
 
-Phase 1 では `<cards/>` を空のまま挿入し、Tableau Desktopが初回オープン時に自動補完するのを期待する（★要検証）。
+apply-edits.ts は `<cards/>` を空のまま挿入し、Tableau Desktopが初回オープン時に自動補完するのを期待する（★要検証）。
 
 ## XMLエンティティエスケープ
 
@@ -170,4 +184,4 @@ Phase 1 では `<cards/>` を空のまま挿入し、Tableau Desktopが初回オ
 | `<` | `&lt;` |
 | `>` | `&gt;` |
 
-formula 属性の中で計算式を書く時、Tableauの文字列リテラル `'foo'` はXML的に `&apos;foo&apos;` になる。
+formula 属性の中で計算式を書く時、Tableauの文字列リテラル `'foo'` はXML的に `&apos;foo&apos;` になる。パッチ JSON の `formula` は apply-edits.ts が自動エスケープするので、手動で変換するのは `rawXml` で直書きするときだけ。
