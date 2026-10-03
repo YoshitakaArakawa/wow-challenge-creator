@@ -8,24 +8,26 @@ So this week, we'll take one week of Superstore and answer four shared questions
 
 ## Requirements
 
-- Dashboard size: 420 x 950 px (designed for a phone, scrolling vertically)
-- 6 sheets (4 charts, 1 for the answer strip, 1 for the one-line summary)
+- Dashboard size: 420 x 1044 px (designed for a phone, scrolling vertically)
+- 8 sheets (4 charts, 1 for the answer tiles, 1 for the header summary, 2 for the KPI cards)
 - Data: Sample - Superstore-2026.xlsx from the WOW data repository
 - On the Data Source page, pivot Sales and Profit into a Metric / Value pair so that one set of calculations serves both metrics
 - Weeks start on Sunday
-- Create a date parameter to select the week. The default is the week of 2026-12-20
+- Create a parameter to select the week. Only the week starts (Sundays) of the latest 8 weeks can be selected, from 2026-06-21 to 2026-08-09. The default is the week of 2026-08-09
 - Place Sales and Profit side by side in two columns, and answer two questions for each:
   - Was this week better than usual? Compare with the previous 13 weeks. This week must not be included in the average or the standard deviation
-  - Was it better than the same time last year? Compare with the same 13 weeks last year (shifted back 52 weeks)
+  - Was it better than the same time last year? Compare with the same 13 weeks last year: the latest 13 weeks (this week included) shifted back 52 weeks. 52 weeks is 364 days, so the weekdays line up
 - Answer Yes if this week is at or above the comparison average, otherwise No
 - Define the expected range as the comparison average ± 1 sample standard deviation
-  - If this week is inside the range, show the gap from the average as a $ difference
-  - If this week is outside the range, flag it as an Alert and show how far it is above the upper bound or below the lower bound
-- In the header, show all four Yes / No answers side by side (Sales and Profit as two columns), mark the ones with an Alert using a symbol such as ⚠, and show the number of Alerts. Symbols (✓ / ✕) are enough; coloring the text is optional
-- Also in the header, show a one-line summary built from the answers: describe only the questions with an Alert and wrap up the rest with "Everything else is within range." If there are no Alerts, show "Everything is within range this week."
-- Row 1 charts: bars for the previous 13 weeks with the range band and the average line (the Analytics pane is enough), and this week's bar set slightly apart and highlighted
-- Row 2 charts: lines for this year's latest 13 weeks and last year's same 13 weeks, with last year's average line and range band. Also show how many of this year's 13 weeks were above or below last year's range
-- Highlight this week's value with color and a label in every chart
+- In the header, show:
+  - The selected week and how many questions are outside their range
+  - A one-line summary: describe only the questions outside their range and wrap up the rest with "Everything else is within range." If none are outside, show "Everything is within range this week."
+  - The four Yes / No answers as 2 x 2 tiles (questions as rows, Sales and Profit as columns). Color each tile by where this week sits: above the range, at or above the average, below the average, or below the range. Add ▲ / ▼ to the answers outside the range
+- In each row, add a KPI card per metric: this week's value and the $ gap from the average. Only when this week is outside the range, add how far it is above the upper bound or below the lower bound, with ▲ / ▼. In row 2, also show how many of the latest 13 weeks were above or below last year's range
+- Row 1 charts: bars for the previous 13 weeks with the range band and the average line (the Analytics pane is enough). Stop the average line before this week. Set this week's bar slightly apart and color it like the tiles
+- Row 2 charts: lines for this year's latest 13 weeks and last year's same 13 weeks, with last year's average line and range band. Keep this year's line in front, and highlight this week as a circle colored like the tiles
+- Under each row's heading, add a one-line legend for the lines, the average line and the band
+- No value labels on the charts (this week's value is in the KPI cards)
 - Match the tooltips and formatting as closely as possible
 
 <!-- HTML VERSION (for site posting)
@@ -36,30 +38,32 @@ So this week, we'll take one week of Superstore and answer four shared questions
 
 <h2>Requirements</h2>
 <ul>
-<li>Dashboard size: 420 x 950 px (designed for a phone, scrolling vertically)</li>
-<li>6 sheets (4 charts, 1 for the answer strip, 1 for the one-line summary)</li>
+<li>Dashboard size: 420 x 1044 px (designed for a phone, scrolling vertically)</li>
+<li>8 sheets (4 charts, 1 for the answer tiles, 1 for the header summary, 2 for the KPI cards)</li>
 <li>Data: Sample - Superstore-2026.xlsx from the WOW data repository</li>
 <li>On the Data Source page, pivot Sales and Profit into a Metric / Value pair so that one set of calculations serves both metrics</li>
 <li>Weeks start on Sunday</li>
-<li>Create a date parameter to select the week. The default is the week of 2026-12-20</li>
+<li>Create a parameter to select the week. Only the week starts (Sundays) of the latest 8 weeks can be selected, from 2026-06-21 to 2026-08-09. The default is the week of 2026-08-09</li>
 <li>Place Sales and Profit side by side in two columns, and answer two questions for each:
 <ul>
 <li>Was this week better than usual? Compare with the previous 13 weeks. This week must not be included in the average or the standard deviation</li>
-<li>Was it better than the same time last year? Compare with the same 13 weeks last year (shifted back 52 weeks)</li>
+<li>Was it better than the same time last year? Compare with the same 13 weeks last year: the latest 13 weeks (this week included) shifted back 52 weeks. 52 weeks is 364 days, so the weekdays line up</li>
 </ul>
 </li>
 <li>Answer Yes if this week is at or above the comparison average, otherwise No</li>
-<li>Define the expected range as the comparison average ± 1 sample standard deviation
+<li>Define the expected range as the comparison average ± 1 sample standard deviation</li>
+<li>In the header, show:
 <ul>
-<li>If this week is inside the range, show the gap from the average as a $ difference</li>
-<li>If this week is outside the range, flag it as an Alert and show how far it is above the upper bound or below the lower bound</li>
+<li>The selected week and how many questions are outside their range</li>
+<li>A one-line summary: describe only the questions outside their range and wrap up the rest with "Everything else is within range." If none are outside, show "Everything is within range this week."</li>
+<li>The four Yes / No answers as 2 x 2 tiles (questions as rows, Sales and Profit as columns). Color each tile by where this week sits: above the range, at or above the average, below the average, or below the range. Add ▲ / ▼ to the answers outside the range</li>
 </ul>
 </li>
-<li>In the header, show all four Yes / No answers side by side (Sales and Profit as two columns), mark the ones with an Alert using a symbol such as ⚠, and show the number of Alerts. Symbols (✓ / ✕) are enough; coloring the text is optional</li>
-<li>Also in the header, show a one-line summary built from the answers: describe only the questions with an Alert and wrap up the rest with "Everything else is within range." If there are no Alerts, show "Everything is within range this week."</li>
-<li>Row 1 charts: bars for the previous 13 weeks with the range band and the average line (the Analytics pane is enough), and this week's bar set slightly apart and highlighted</li>
-<li>Row 2 charts: lines for this year's latest 13 weeks and last year's same 13 weeks, with last year's average line and range band. Also show how many of this year's 13 weeks were above or below last year's range</li>
-<li>Highlight this week's value with color and a label in every chart</li>
+<li>In each row, add a KPI card per metric: this week's value and the $ gap from the average. Only when this week is outside the range, add how far it is above the upper bound or below the lower bound, with ▲ / ▼. In row 2, also show how many of the latest 13 weeks were above or below last year's range</li>
+<li>Row 1 charts: bars for the previous 13 weeks with the range band and the average line (the Analytics pane is enough). Stop the average line before this week. Set this week's bar slightly apart and color it like the tiles</li>
+<li>Row 2 charts: lines for this year's latest 13 weeks and last year's same 13 weeks, with last year's average line and range band. Keep this year's line in front, and highlight this week as a circle colored like the tiles</li>
+<li>Under each row's heading, add a one-line legend for the lines, the average line and the band</li>
+<li>No value labels on the charts (this week's value is in the KPI cards)</li>
 <li>Match the tooltips and formatting as closely as possible</li>
 </ul>
 
