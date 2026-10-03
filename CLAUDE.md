@@ -77,7 +77,7 @@ refine/wb-build の TWB 編集 → create-workbook iterate.ts (検証 → repack
 → refine/compare.html でドラフト HTML と Cloud 描画を並べて確認 → フィードバック → TWB 編集 …
 ```
 
-比較ページは `serve-refine.py` でローカル配信し、Chrome で開いてユーザーと同じ画面を見る。静止画で判断できない動作（ツールヒント・パラメータ・ハイライト）は Cloud URL を開いて確かめる。
+比較ページ `refine/compare.html` はファイルのまま Chrome で開き、ユーザーと同じ画面を見る（サーバー不要。中身は `iterate.ts` が書く `compare-data.js`）。静止画で判断できない動作（ツールヒント・パラメータ・ハイライト）は Cloud URL を開いて確かめる。
 
 ### 協働ループ (Step 4以降)
 
@@ -100,7 +100,7 @@ publish後はユーザーがCloudで微修正することがある。次のル�
 | `tmp/cloud-pulled.twbx` | analyze-twbx (Cloud経路) | (Claude読み込み) |
 | `refine/YYYYWNN.twbx` | create-workbook | publish-to-cloud |
 | `refine/render/*.png` | publish-to-cloud (`--render`) | refine 比較ページ、Claude 読み込み |
-| `refine/publish-result.json` | publish-to-cloud | create-x-post、refine 比較ページ |
+| `refine/publish-result.json` | publish-to-cloud | create-x-post、create-workbook（`iterate.ts` が比較ページ用の `compare-data.js` に変換） |
 | `refine/backup/{wb}.twbx` | publish-to-cloud (overwrite時) | (ロールバック用) |
 | `x-post.txt` | create-x-post | (最終成果物) |
 

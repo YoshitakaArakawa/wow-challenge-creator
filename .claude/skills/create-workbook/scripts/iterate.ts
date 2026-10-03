@@ -2,14 +2,20 @@
  * One round of the refine loop: edit TWB → publish to Tableau Cloud → look at the render.
  *
  *   npx tsx iterate.ts --twbx outputs/{theme}/refine/YYYYWNN.twbx [--views "Dashboard"] [--patch <workbook-patch.json>]
+ *   npx tsx iterate.ts --twbx outputs/{theme}/refine/YYYYWNN.twbx --compare-only
  *
  * Works on outputs/{theme}/refine/:
  *   wb-build/            unpacked workbook being edited (created from --twbx on first run)
  *   YYYYWNN.twbx         repacked from wb-build/ every round, then published with --overwrite --render
  *   render/*.png, publish-result.json, backup/   written by publish-to-cloud/scripts/publish.py
- *   compare.html         copied from ../assets/compare.html when missing
+ *   compare.html         copied from ../assets/compare.html when missing or different
+ *   compare-data.js      draft list + renders for compare.html, rewritten every run
+ *
+ * compare.html reads compare-data.js through a <script> tag, so it works when opened as a local file
+ * (file://), where fetch() is blocked.
  *
  * --patch additionally runs validate-twb.ts (field-reference checks against the generation patch).
+ * --compare-only rewrites compare.html / compare-data.js and stops (e.g. after adding a draft HTML).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -20,6 +26,8 @@ import { unzip, zipDirectory } from "./lib/zip-tools.js";
 import { repoRootFrom } from "./lib/paths.js";
 
 const REFINE_DIR_NAME = "refine";
+const COMPARE_PAGE = "compare.html";
+const COMPARE_DATA = "compare-data.js";
 
 interface StepResult {
   step: string;
@@ -38,6 +46,48 @@ function run(cmd: string, args: string[], cwd: string): { ok: boolean; stdout: s
   const finalArgs = useShell ? args.map((a) => (/\s/.test(a) ? `"${a}"` : a)) : args;
   const res = spawnSync(cmd, finalArgs, { cwd, encoding: "utf8", shell: useShell });
   return { ok: res.status === 0, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
+}
+
+/** Draft HTML files in a folder, as paths relative to refine/ (forward slashes for use as URLs). */
+function draftsIn(refineDir: string, dir: string): string[] {
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter((f) => f.toLowerCase().endsWith(".html") && f !== COMPARE_PAGE)
+    .sort()
+    .map((f) => path.relative(refineDir, path.join(dir, f)).split(path.sep).join("/"));
+}
+
+/** Keep refine/compare.html in step with the template and write the data file it reads. */
+function writeCompare(refineDir: string, compareTemplate: string): void {
+  const page = path.join(refineDir, COMPARE_PAGE);
+  if (fs.existsSync(compareTemplate)) {
+    const template = fs.readFileSync(compareTemplate, "utf8");
+    if (!fs.existsSync(page) || fs.readFileSync(page, "utf8") !== template) fs.writeFileSync(page, template);
+  }
+  const resultPath = path.join(refineDir, "publish-result.json");
+  let result: Record<string, unknown> | null = null;
+  try {
+    result = fs.existsSync(resultPath) ? JSON.parse(fs.readFileSync(resultPath, "utf8")) : null;
+  } catch {
+    result = null; // a half-written result shows as "no renders" rather than breaking the page
+  }
+  const renders = ((result?.renders as Array<{ viewName: string; filePath: string }> | undefined) ?? []).map((r) => ({
+    view: r.viewName,
+    src: path.relative(refineDir, r.filePath).split(path.sep).join("/"),
+  }));
+  const data = {
+    drafts: [
+      { label: "refine/", files: draftsIn(refineDir, refineDir) },
+      { label: "prototype/", files: draftsIn(refineDir, path.join(path.dirname(refineDir), "prototype")) },
+    ],
+    renders,
+    publish: result
+      ? { ok: result.ok === true, workbookName: result.workbookName ?? null, at: result.createdAt ?? result.attemptedAt ?? null, webpageUrl: result.webpageUrl ?? null }
+      : null,
+    writtenAt: new Date().toISOString(),
+  };
+  fs.writeFileSync(path.join(refineDir, COMPARE_DATA), `window.COMPARE_DATA = ${JSON.stringify(data, null, 2)};\n`);
 }
 
 function findTwb(dir: string): string | null {
@@ -74,8 +124,10 @@ function main() {
 
   const steps: StepResult[] = [];
 
-  if (!fs.existsSync(path.join(refineDir, "compare.html")) && fs.existsSync(compareTemplate)) {
-    fs.copyFileSync(compareTemplate, path.join(refineDir, "compare.html"));
+  writeCompare(refineDir, compareTemplate);
+  if (argv.includes("--compare-only")) {
+    steps.push({ step: "compare", ok: true, summary: path.join(refineDir, COMPARE_PAGE) });
+    return finish(steps, null, 0);
   }
 
   if (!fs.existsSync(buildDir)) {
@@ -123,6 +175,7 @@ function main() {
   const resultPath = path.join(refineDir, "publish-result.json");
   const result = fs.existsSync(resultPath) ? JSON.parse(fs.readFileSync(resultPath, "utf8")) : null;
   const pubOk = p.ok && result?.ok === true;
+  writeCompare(refineDir, compareTemplate);
   steps.push({
     step: "publish+render",
     ok: pubOk,

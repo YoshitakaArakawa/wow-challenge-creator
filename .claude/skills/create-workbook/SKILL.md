@@ -99,7 +99,8 @@ outputs/{theme}/
     YYYYWNN.twbx          作業用かつ publish 対象。テーマ直下には .twbx を置かない
     refine.html           refine 中に改訂するドラフト HTML。1 ファイルを上書きで育てる（prototype/ からコピーして始める）
     wb-build/             編集中の TWB（初回に .twbx から展開）
-    compare.html          比較ページ（初回に assets/compare.html からコピー）
+    compare.html          比較ページ（assets/compare.html のコピー。ファイルのまま開く）
+    compare-data.js       比較ページが読むドラフト一覧と描画の一覧（iterate.ts が毎回書き直す）
     render/*.png          Cloud の描画
     publish-result.json   publish 結果
     backup/               上書き前の Cloud 版
@@ -113,14 +114,12 @@ npx tsx $SKILL/scripts/iterate.ts --twbx "$THEME_DIR/refine/2026W40.twbx" [--vie
 
 `iterate.ts` は、TWB の整形式チェック → `.twbx` への再梱包 → `publish.py --overwrite --render` を順に行う。`--patch` を付けると `validate-twb.ts` のフィールド参照チェックも走る。XSD 検証は含まないので、Step 4 の 3b を通した後に始める。手作業で作った `.twbx` から始めるときは、それを `refine/YYYYWNN.twbx` に置けばよい。
 
-比較ページは、テーマフォルダをローカル配信して開く:
+比較ページは `refine/compare.html` をブラウザでファイルのまま開く（サーバー不要）。左にドラフト HTML（`refine/` と `prototype/` の両方から選べる）、右に Cloud の描画 PNG が並ぶ。
 
-```bash
-python $SKILL/scripts/serve-refine.py "$THEME_DIR"   # バックグラウンドで起動
-# → http://127.0.0.1:8790/refine/compare.html
-```
-
-左にドラフト HTML（`refine/` と `prototype/` の両方から選べる）、右に Cloud の描画 PNG が並ぶ。「Reload both」で最新の publish を読み直す。ユーザーと画面を見ながら進めるときは、このページを Chrome で開いて共有する。
+- 一覧は `iterate.ts` が書き出す `compare-data.js` から読む。「Reload both」はこのファイルとドラフト・PNG を読み直す
+- ドラフト HTML を足しただけで publish しないときは、`iterate.ts --twbx ... --compare-only` で一覧だけ更新する
+- ユーザーと画面を見ながら進めるときは、このページを Chrome で開いて共有する。Claude in Chrome で開くには、Chrome の拡張機能の詳細で「ファイルの URL へのアクセスを許可する」をオンにする
+- Claude Code デスクトップの組み込みブラウザは `file://` を静的スナップショットにするため、`compare-data.js` を読めず空になる。使わない
 
 見せ方の変更（レイアウト・文言・情報の削減）は、TWB より先にドラフト HTML で合意する。HTML は数秒で直せ、publish の待ちがない。`prototype/` の原案は要件段階の記録として残し、改訂は `refine/refine.html` を上書きする。版番号は付けない。HTML では Tableau で再現できる表現だけを使う。高さ不足の `#####` や空白の追加のような機械的な修正は、HTML を挟まず TWB を直す。
 
@@ -213,7 +212,7 @@ Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認
 - [references/twb-pitfalls.md](references/twb-pitfalls.md) — XSDを通ってもDesktopで失敗・表示崩れする原因と回避規範（引用符・書式・色・線・テキスト・レイアウト・フォルダ分け）
 - [references/chart-recipes/](references/chart-recipes/) — チャート種別ごとのレシピXML（プレースホルダ `{{NAME}}` 形式）
 - `references/schemas/` — Tableau公式XSDの最新スナップショットを置く手元キャッシュ（gitignore対象。新機能の構文を読むときに `update-schemas.ts` で取得）
-- [assets/compare.html](assets/compare.html) — refine ループの比較ページのひな形（`iterate.ts` が `refine/` にコピーする）
+- [assets/compare.html](assets/compare.html) — refine ループの比較ページのひな形（`iterate.ts` が `refine/` にコピーし、テンプレートが変われば上書きする）
 - [scripts/vendor/tableau-plugin/](scripts/vendor/tableau-plugin/) — `tableau/tableau-plugin` から取り込んだXSD検証スクリプト・版別XSD（2025.1〜2026.2）・構文例JSON（Apache-2.0。出典は `SOURCE.md`）
 
 ## 初回セットアップ

@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Draft vs Cloud</title>
 <!--
-  Refine-loop comparison page. Copied into outputs/{theme}/refine/ by iterate.ts and served by
-  serve-refine.py (the theme folder is the web root, so this page is /refine/compare.html).
-  Left: draft HTML from ../prototype/ (original prototypes) and ./ (drafts revised during refine).
-  Right: Cloud renders listed in publish-result.json.
+  Refine-loop comparison page. Copied into outputs/{theme}/refine/ by iterate.ts; open it as a local file.
+  Left: draft HTML from ./ (drafts revised during refine) and ../prototype/ (original prototypes).
+  Right: the latest Cloud renders.
+  Both lists come from compare-data.js, which iterate.ts rewrites every run. It is loaded through a script
+  element rather than fetch() because browsers block fetch() on file:// pages.
 -->
 <style>
   :root { --bg:#f4f3ef; --ink:#222; --muted:#777; --line:#ddd; --panel:#fff; }
@@ -43,50 +44,40 @@
 <script>
 const sel = document.getElementById("draft");
 const frame = document.getElementById("frame");
+const DATA_FILE = "compare-data.js";
 
-// The local server returns directory listings; collect every .html from both folders.
-// Option values are paths relative to this page (refine/).
-const SOURCES = [
-  { dir: "./", label: "refine/" },
-  { dir: "../prototype/", label: "prototype/" },
-];
-
-async function htmlIn(dir) {
-  const html = await (await fetch(dir + "?t=" + Date.now())).text();
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  return [...doc.querySelectorAll("a[href]")]
-    .map((a) => decodeURIComponent(a.getAttribute("href")))
-    .filter((h) => h.toLowerCase().endsWith(".html") && h !== "compare.html")
-    .sort();
+// Re-inject the data script on every reload; the query string defeats the browser cache.
+function loadData() {
+  return new Promise((resolve) => {
+    document.getElementById("compare-data")?.remove();
+    window.COMPARE_DATA = null;
+    const s = document.createElement("script");
+    s.id = "compare-data";
+    s.src = DATA_FILE + "?t=" + Date.now();
+    s.onload = () => resolve(window.COMPARE_DATA);
+    s.onerror = () => resolve(null);
+    document.head.appendChild(s);
+  });
 }
 
-async function listDrafts() {
+function listDrafts(data) {
   const keep = sel.value;
   sel.innerHTML = "";
   const names = [];
-  for (const src of SOURCES) {
-    try {
-      const files = await htmlIn(src.dir);
-      if (!files.length) continue;
-      const group = document.createElement("optgroup");
-      group.label = src.label;
-      for (const f of files) {
-        group.appendChild(new Option(f, src.dir + f));
-        names.push(src.dir + f);
-      }
-      sel.appendChild(group);
-    } catch (e) {
-      /* folder missing; skip */
+  for (const group of data?.drafts ?? []) {
+    if (!group.files.length) continue;
+    const og = document.createElement("optgroup");
+    og.label = group.label;
+    for (const f of group.files) {
+      og.appendChild(new Option(f.split("/").pop(), f));
+      names.push(f);
     }
+    sel.appendChild(og);
   }
-  try {
-    let remembered = null;
-    try { remembered = localStorage.getItem("compare-draft"); } catch (e) { /* storage may be blocked */ }
-    const preferred = keep || remembered;
-    if (preferred && names.includes(preferred)) sel.value = preferred;
-  } catch (e) {
-    /* falls through to the empty-state message below */
-  }
+  let remembered = null;
+  try { remembered = localStorage.getItem("compare-draft"); } catch (e) { /* storage may be blocked */ }
+  const preferred = keep || remembered;
+  if (preferred && names.includes(preferred)) sel.value = preferred;
   if (!sel.options.length) sel.add(new Option("(no draft HTML in refine/ or prototype/)", ""));
 }
 
@@ -94,32 +85,33 @@ function loadDraft() {
   frame.src = sel.value ? encodeURI(sel.value) + "?t=" + Date.now() : "about:blank";
 }
 
-async function loadRender() {
+function showRenders(data) {
   const box = document.getElementById("render");
   const meta = document.getElementById("meta");
-  try {
-    const r = await (await fetch("publish-result.json?t=" + Date.now())).json();
-    const renders = r.renders || [];
-    box.innerHTML = renders.length ? "" : '<p class="empty">No renders yet. Run iterate.ts.</p>';
-    for (const item of renders) {
-      const file = item.filePath.split(/[\\/]/).pop();
-      const img = new Image();
-      img.alt = item.viewName;
-      img.src = "render/" + encodeURIComponent(file) + "?t=" + Date.now();
-      box.appendChild(img);
-    }
-    const at = new Date(r.createdAt || r.attemptedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
-    meta.textContent = (r.ok ? r.workbookName + " · published " : "last publish failed · ") + at + " JST";
-  } catch (e) {
-    box.innerHTML = '<p class="empty">publish-result.json not found. Run iterate.ts.</p>';
+  if (!data) {
+    box.innerHTML = '<p class="empty">compare-data.js not found. Run iterate.ts.</p>';
     meta.textContent = "";
+    return;
   }
+  const renders = data.renders ?? [];
+  box.innerHTML = renders.length ? "" : '<p class="empty">No renders yet. Run iterate.ts.</p>';
+  for (const item of renders) {
+    const img = new Image();
+    img.alt = item.view;
+    img.src = encodeURI(item.src) + "?t=" + Date.now();
+    box.appendChild(img);
+  }
+  const pub = data.publish;
+  if (!pub) { meta.textContent = "not published yet"; return; }
+  const at = pub.at ? new Date(pub.at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }) + " JST" : "";
+  meta.textContent = (pub.ok ? pub.workbookName + " · published " : "last publish failed · ") + at;
 }
 
 async function reloadAll() {
-  await listDrafts();
+  const data = await loadData();
+  listDrafts(data);
   loadDraft();
-  loadRender();
+  showRenders(data);
 }
 
 sel.addEventListener("change", () => {

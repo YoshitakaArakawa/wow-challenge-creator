@@ -1,61 +1,56 @@
+# ---- Dependencies --------------------------------------------------------
 node_modules/
 package-lock.json
+__pycache__/
+
+# ---- Shared template workbook (copied in locally, not redistributed) -----
 common/
-nul
 
-# Per-challenge archived assets (not published)
-**/Archived/
-
-# Per-challenge tmp folders (extraction byproducts, screenshots, reference downloads)
+# ---- Per-challenge working folders (outputs/{theme}/) --------------------
+# Only discussion.md, requirements-{ja,en}.md and x-post.txt are tracked.
+# tmp/       intermediates, scripts, screenshots, blog notes
+# prototype/ draft HTML
+# refine/    refine loop: working .twbx, wb-build, compare page, Cloud renders, publish results
 outputs/*/tmp/
-
-# Per-challenge prototype HTML and refine loop (compare page, working workbook, Cloud renders)
 outputs/*/prototype/
 outputs/*/refine/
-
-# Downloaded third-party datasets (Kaggle etc.) — license-bound, fetch via documented steps
+# Non-public per-challenge assets
+**/Archived/
+# Third-party datasets (license-bound; fetch via the documented steps)
 outputs/*/Dataset/
 outputs/*/data/
 **/data_points.json
 **/dc_grocery.json
-
-# Tableau workbook extraction temp folders (twb extracted from twbx)
+# Workbook extraction byproducts
 **/.tmp_twb/
 **/twbx-extracted/
 **/twbx-tc25/
 
-# Image outputs (Tableau renders, screenshots, viz exports)
-*.png
-
-# Tableau workbooks (published on Tableau Public — no need to mirror in repo)
+# ---- Tableau files -------------------------------------------------------
+# Workbooks are published to Tableau Cloud / Public; no need to mirror them here
 *.twbx
-
-# Local Claude Code settings (per-user, not shared)
-.claude/settings.json
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment / secrets
-.env
-.auth-cache/
-.env.*
-!.env.example
-*.pem
-*.key
-
-# Logs
-*.log
-
-# Playwright MCP session artifacts (screenshots, snapshots, console logs)
-.playwright-mcp/
-
 # Tableau Desktop auto-recovery files
 *.twbr
+# Renders, screenshots and viz exports
+*.png
 
+# ---- Skill caches --------------------------------------------------------
 # create-workbook: local snapshot of tableau-document-schemas (fetched by update-schemas.ts)
 .claude/skills/create-workbook/references/schemas/
 
-# Python bytecode
-__pycache__/
+# ---- Local settings, secrets and tool state ------------------------------
+.claude/settings.json
+.env
+.env.*
+!.env.example
+.auth-cache/
+*.pem
+*.key
+.playwright-mcp/
+*.log
+
+# ---- OS ------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+# A stray "nul" file appears when a Windows-style "> nul" redirect runs in a POSIX shell
+nul
