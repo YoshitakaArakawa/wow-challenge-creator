@@ -17,13 +17,18 @@ npx tsx .claude/skills/analyze-twbx/scripts/twbx/unpack.ts "<twbxPath>" --output
 # → mainTwbPath, extractionPath が出力される
 
 # 2. 構造確認
-npx tsx .claude/skills/analyze-twbx/scripts/twbx/structure.ts "<mainTwbPath>" [--fields]
+npx tsx .claude/skills/analyze-twbx/scripts/twbx/structure.ts "<mainTwbPath>" [--fields] [--usage]
 
 # 3. 詳細分析
 npx tsx .claude/skills/analyze-twbx/scripts/twbx/calculated-fields.ts "<mainTwbPath>"
 npx tsx .claude/skills/analyze-twbx/scripts/twbx/lod-expressions.ts "<mainTwbPath>"
 npx tsx .claude/skills/analyze-twbx/scripts/twbx/dependencies.ts "<mainTwbPath>"
 ```
+
+`--usage` を付けると、次の 2 つが加わる。ワークブックの簡素化レビュー（create-workbook Step 5）に使う。
+
+- `fieldUsage`：計算フィールド・パラメータ・シート内だけの計算ごとに、使われているシートと棚（`rows` / `cols` / `color` / `text` / `lod` / `filter` / `reference-line` / `label-text` / `tooltip-text` など）、参照する・参照されるフィールド、`unused`（どこからも使われない）
+- `sheetsNotOnDashboard`：どのダッシュボードにも載っていないワークシート
 
 初回のみ `cd .claude/skills/analyze-twbx/scripts/twbx && npm install`。
 

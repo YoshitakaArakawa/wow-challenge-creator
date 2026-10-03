@@ -2,7 +2,9 @@
  * Get TWBX Workbook Structure
  *
  * Extracts complete workbook architecture from a .twb file.
- * Usage: npx tsx structure.ts <twbFilePath> [--fields]
+ * Usage: npx tsx structure.ts <twbFilePath> [--fields] [--usage]
+ *   --usage adds a per-field usage table (sheets, shelves, formula references)
+ *   and the worksheets that no dashboard shows.
  */
 
 import * as fs from "fs/promises";
@@ -18,6 +20,7 @@ import {
   containsLodExpression,
   EncodingInfo,
 } from "./lib/twb-parser";
+import { buildUsageReport } from "./lib/field-usage";
 
 function parseDataSources(datasources: unknown) {
   const dataSources: any[] = [];
@@ -208,9 +211,10 @@ function parseDashboards(dashboards: unknown) {
 async function main() {
   const twbFilePath = process.argv[2];
   const includeFieldDetails = process.argv.includes("--fields");
+  const includeUsage = process.argv.includes("--usage");
 
   if (!twbFilePath) {
-    console.error("Usage: npx tsx structure.ts <twbFilePath> [--fields]");
+    console.error("Usage: npx tsx structure.ts <twbFilePath> [--fields] [--usage]");
     process.exit(1);
   }
 
@@ -279,6 +283,7 @@ async function main() {
       hasParameters: parameters.length > 0,
       hasMultipleDataSources: dataSources.length > 1,
     },
+    ...(includeUsage ? buildUsageReport(content) : {}),
   };
 
   console.log(JSON.stringify(result, null, 2));

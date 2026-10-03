@@ -46,7 +46,7 @@ note: 日本語コミュニティ（Tableau 女子会、個人 note、企業ブ�
 | BAN / KPI カード | 最重要の数値を即座に読ませる | テキストマークで大きな数値、比較を小さく併記する | 3、計算 0〜2 | 実証済み |
 | コンテナ・余白・均等配分 | 要素が詰まる、まとまりが見えない | 縦横コンテナで「均等に配分」、余白をそろえる | 3〜5、計算 0 | 実証済み（twb-pitfalls.md） |
 | 空白 1 個の区切り線 | 線用と余白用に空白を 3 個並べると、オブジェクトが増えて階層が読みにくい | 背景色を付けた空白に外側のパディングを入れ、内側に残った部分を線に見せる | 1、計算 0 | 実証済み |
-| 最新期の手前で止まる平均線 | アナリティクスの平均線が最新期のペインにも引かれる | 最新期だけ NULL を返すシート専用の計算を詳細に置き、平均線をその値のペイン平均にする | 3、計算 0（アドホック） | 実証済み |
+| 最新期の手前で止まる平均線 | アナリティクスの平均線が最新期のペインにも引かれる | 最新期だけ NULL を返す計算を詳細に置き、平均線をその値のペイン平均にする | 3、短い計算 1 | 実証済み |
 
 ## B：場面に応じて使う定石
 
@@ -112,15 +112,17 @@ note: 日本語コミュニティ（Tableau 女子会、個人 note、企業ブ�
 
 ### `MIN(1.0)` のダミー軸で色付きタイル
 
-アドホック計算はワークシートの `<datasource-dependencies>` にだけ置く。データソースの計算フィールドは増えない。
+`MIN(1.0)` は計算フィールドとしてデータソースに定義し、用途の分かる名前（例：`Tile Length`）を付ける。ワークシートでは `derivation='User'` の column-instance で参照する。
 
 小数の `MIN(1.0)`（`datatype='real'`）を使う。軸範囲を細かく調整できる。整数の `min(1)` でも同じ見た目になる。
 
 ```xml
-<!-- worksheet の datasource-dependencies -->
-<column caption='min(1.0)' datatype='real' name='[Calculation_900]' role='measure' type='quantitative'>
-  <calculation class='tableau' formula='min(1.0)' />
+<!-- データソースの計算フィールド -->
+<column caption='Tile Length' datatype='real' name='[Calculation_900]' role='measure' type='quantitative'>
+  <calculation class='tableau' formula='// Fixed bar length that turns each cell into a tile&#13;&#10;MIN(1.0)' />
 </column>
+
+<!-- worksheet の datasource-dependencies：定義の写しと column-instance -->
 <column-instance column='[Calculation_900]' derivation='User' name='[usr:Calculation_900:qk]' pivot='key' type='quantitative' />
 
 <!-- 表：行 = 問い、列 = 指標 / ダミー軸 -->
@@ -179,13 +181,15 @@ note: 日本語コミュニティ（Tableau 女子会、個人 note、企業ブ�
 
 ### 最新期の手前で止まる平均線
 
-列に「今週か」の判定を置いて今週を別ペインにしても、ペインごとの平均線は今週のペインに今週の値で 1 本引かれる。今週だけ NULL を返すアドホック計算を詳細に置き、平均線の `value-column` にすると、今週のペインは値が無く線が出ない。データソースの計算フィールドは増えない。
+列に「今週か」の判定を置いて今週を別ペインにしても、ペインごとの平均線は今週のペインに今週の値で 1 本引かれる。今週だけ NULL を返す計算フィールドを詳細に置き、平均線の `value-column` にすると、今週のペインは値が無く線が出ない。
 
 ```xml
-<!-- worksheet の datasource-dependencies -->
+<!-- データソースの計算フィールド -->
 <column caption='Previous Weeks Value' datatype='real' name='[Calculation_901]' role='measure' type='quantitative'>
-  <calculation class='tableau' formula='SUM(IF NOT [Is This Week] THEN [Value] END)' />
+  <calculation class='tableau' formula='// Average line source: NULL on this week, so the line stops before it&#13;&#10;SUM(IF NOT [Is This Week] THEN [Value] END)' />
 </column>
+
+<!-- worksheet の datasource-dependencies：定義の写しと column-instance -->
 <column-instance column='[Calculation_901]' derivation='User' name='[usr:Calculation_901:qk]' pivot='key' type='quantitative' />
 
 <!-- ペイン -->
@@ -256,7 +260,7 @@ note: 日本語コミュニティ（Tableau 女子会、個人 note、企業ブ�
 </pane>
 ```
 
-合計だけをラベルにするときは、2 本目の軸に同じ値の別名の計算（例：アドホック計算 `SUM([Value])`）を置く。そのペインは色を外し、`<format attr='mark-transparency' value='0' />` とラベルを付ける。不透明度は 0（透明）〜255（不透明）。
+合計だけをラベルにするときは、2 本目の軸に同じ値の別名の計算（例：計算フィールド `SUM([Value])`）を置く。そのペインは色を外し、`<format attr='mark-transparency' value='0' />` とラベルを付ける。不透明度は 0（透明）〜255（不透明）。
 
 ### 発散型パレットの中心
 
