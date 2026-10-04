@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits"
+  },
+  "autoMemoryEnabled": false,
+  "extraKnownMarketplaces": {
+    "config-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "YoshitakaArakawa/claude-config"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "tableau@config-plugins": true
+  }
+}
