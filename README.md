@@ -7,7 +7,7 @@
 1. **ブレスト** - アイデア発想と重複チェック
 2. **要件作成** - 英語・日本語のバイリンガル要件文を一貫したスタイルで作成。ワークブック作成前のドラフト（任意で HTML + Chart.js プロトタイプ）と、完成後の確定の2段階
 3. **ワークブック解析** - .twbx から構造、計算フィールド、LOD式、依存関係を抽出。Tableau Public スクリーンショット取得、Tableau Cloud 上のワークブック取得にも対応
-4. **ワークブック生成** - 要件からテンプレート差分編集で .twbx を生成（中間スコープ）
+4. **ワークブック生成** - 要件とテンプレートから .twbx を生成。計算フィールドをパッチで投入し、シートとダッシュボードは TWB を直接編集する。表示は Tableau Cloud の描画で確認する（Sankey 等の特殊チャートは対象外）
 5. **Tableau Cloud パブリッシュ** - OAuth ブラウザサインイン（PAT も可）、上書き対応、上書き時バックアップ、全ビューの PNG 描画取得
 6. **X 投稿文の作成** - 出題公開時の告知文を作成
 7. **Tableau 機能検索** - Tableau Desktop の最新機能を検索
@@ -20,20 +20,20 @@ cd wow-challenge-creator
 cp .env.example .env   # Tableau Cloud の URL・サイト・投稿先プロジェクトを埋める
 ```
 
-各 Skill のスクリプトは初回のみ依存のインストールが必要。
+各 Skill のスクリプトは初回のみ依存のインストールが必要。すべてリポジトリ直下で実行する。
 
 ```bash
 # analyze-twbx
-cd .claude/skills/analyze-twbx/scripts/twbx && npm install
-cd ../tableau-public && npm install
-cd ../cloud && npm install
+npm install --prefix .claude/skills/analyze-twbx/scripts/twbx
+npm install --prefix .claude/skills/analyze-twbx/scripts/tableau-public
+npm install --prefix .claude/skills/analyze-twbx/scripts/cloud
 
 # create-workbook
-cd .claude/skills/create-workbook/scripts && npm install
-pip install -r vendor/tableau-plugin/scripts/requirements.txt   # XSD 検証用の lxml
+npm install --prefix .claude/skills/create-workbook/scripts
+pip install -r .claude/skills/create-workbook/scripts/vendor/tableau-plugin/scripts/requirements.txt   # XSD 検証用の lxml
 
 # publish-to-cloud
-cd .claude/skills/publish-to-cloud/scripts && pip install -r requirements.txt
+pip install -r .claude/skills/publish-to-cloud/scripts/requirements.txt
 ```
 
 Tableau Cloud の認証は OAuth のブラウザサインイン。`.env` にトークンは置かない（PAT を使う場合のみ `TABLEAU_PAT_NAME` / `TABLEAU_PAT_VALUE` を設定する）。
@@ -44,7 +44,9 @@ python .claude/skills/publish-to-cloud/scripts/tableau_auth.py login
 
 ## 使い方
 
-プロジェクトを Claude Code で開いて対話するだけで、以下のワークフローで出題を作成できる。
+プロジェクトを Claude Code で開いて対話すると、以下のワークフローで出題を作成できる。
+
+ブラウザや Tableau Desktop での表示確認は、利用者が自分で開いて行う。Claude は画面を自動操作せず、開くコマンドや Cloud の URL をチャットに出す。
 
 1. **出題フォルダの作成** - `outputs/YYYY-MM-DD-theme-name/`
 2. **ブレスト** (`brainstorm`) - 直近の出題との重複チェック、ヒアリング、アイデア展開
@@ -73,7 +75,8 @@ examples/              # 出題例（WOW2026 W12: https://www.workout-wednesday.
 
 ## 謝辞
 
-`.claude/skills/analyze-twbx/scripts/twbx/` のワークブック解析スクリプトは [tableau-public-mcp](https://github.com/wjsutton/tableau-public-mcp)（[wjsutton](https://github.com/wjsutton) 作、[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)）を参考にしています。
+- `.claude/skills/analyze-twbx/scripts/twbx/` のワークブック解析スクリプトは [tableau-public-mcp](https://github.com/wjsutton/tableau-public-mcp)（[wjsutton](https://github.com/wjsutton) 作、[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)）を参考にしています。
+- `.claude/skills/create-workbook/scripts/vendor/tableau-plugin/` には [tableau-plugin](https://github.com/tableau/tableau-plugin)（Salesforce, Inc.、[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)）の XSD スキーマ・構文例・検証スクリプトを、変更せずに同梱しています。取得元のコミットと対応表は同フォルダの `SOURCE.md` にあります。
 
 ## ライセンス
 
