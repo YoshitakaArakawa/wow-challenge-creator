@@ -5,7 +5,7 @@
 ## できること
 
 1. **ブレスト** - アイデア発想と重複チェック
-2. **要件作成** - 英語・日本語のバイリンガル要件文を一貫したスタイルで作成。任意で HTML + Chart.js プロトタイプを併産
+2. **要件作成** - 英語・日本語のバイリンガル要件文を一貫したスタイルで作成。ワークブック作成前のドラフト（任意で HTML + Chart.js プロトタイプ）と、完成後の確定の2段階
 3. **ワークブック解析** - .twbx から構造、計算フィールド、LOD式、依存関係を抽出。Tableau Public スクリーンショット取得、Tableau Cloud 上のワークブック取得にも対応
 4. **ワークブック生成** - 要件からテンプレート差分編集で .twbx を生成（中間スコープ）
 5. **Tableau Cloud パブリッシュ** - OAuth ブラウザサインイン（PAT も可）、上書き対応、上書き時バックアップ、全ビューの PNG 描画取得
@@ -48,12 +48,12 @@ python .claude/skills/publish-to-cloud/scripts/tableau_auth.py login
 
 1. **出題フォルダの作成** - `outputs/YYYY-MM-DD-theme-name/`
 2. **ブレスト** (`brainstorm`) - 直近の出題との重複チェック、ヒアリング、アイデア展開
-3. **要件作成** (`create-requirements`) - 英語+日本語の要件文。任意で HTML プロトタイプ
-4. **ワークブック生成** (`create-workbook`) - テンプレに計算フィールドを投入し、TWB を直接編集して .twbx を生成
-5. **Cloud パブリッシュ** (`publish-to-cloud`) - Tableau Cloud にアップロード
+3. **要件ドラフト** (`create-requirements`) - 作業用の要件と、任意で HTML プロトタイプ
+4. **ワークブック生成** (`create-workbook`) - テンプレに計算フィールドを投入し、TWB を直接編集して .twbx を生成。表示の調整は Tableau Cloud へのパブリッシュ (`publish-to-cloud`) と描画の確認を繰り返して行う
+5. **要件の確定** (`create-requirements`) - 完成した表示に合わせて、英語+日本語の要件文を仕上げる
 6. **X 投稿文の作成** (`create-x-post`) - Cloud URL を含めた告知文
 
-任意・分岐: `analyze-twbx`（既存Viz・Cloud上WB解析）、`search-tableau-features`（新機能検索）。詳細は [CLAUDE.md](CLAUDE.md) のワークフロー節を参照。
+任意・分岐: `analyze-twbx`（既存Viz・Cloud上WB解析）、`search-tableau-features`（新機能検索）、`publish-to-cloud` の単独実行（手動で作った .twbx の公開）。詳細は [CLAUDE.md](CLAUDE.md) のパイプライン節を参照。
 
 ## プロジェクト構成
 

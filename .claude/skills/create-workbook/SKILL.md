@@ -154,10 +154,7 @@ refine ループの間はワークシートを非表示にしない。非表示�
    - 描画を見て、他の要素と同じ情報を繰り返している表示を探す。ドラフト HTML の段階では見えなかった重複がここで見える
    - 表示を消したら、ドラフト HTML（`refine/refine.html`）も合わせて直す
 
-### Step 6: 要件文の照合と Desktop での最終確認
-
-Desktop で開く前に、`requirements-{ja,en}.md` を 1 行ずつ現物と照らす。refine ループで要素を消したり変えたりした分が、要件文に残りやすい。キーワード検索だけでは、言い回しの違う行を見落とす。英語版は本文と HTML 埋め込みの両方を直す。
-
+### Step 6: Desktop での最終確認
 
 Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認する。Cloud では通るが Desktop が拒否する属性があるため、この確認は省かない。
 
@@ -165,7 +162,8 @@ Cloud で表示が固まったら `.twbx` を Tableau Desktop で開いて確認
 - Desktop で `refine/YYYYWNN.twbx` に上書き保存しない。`iterate.ts` は毎回 `wb-build` の TWB から作り直すので、その変更は次のラウンドで消える。Desktop での変更は `tmp/` に別名で保存し、XML を写して `wb-build` に反映する
 - Desktop での操作（書式を 1 つ変えて別名保存する等）はユーザーに頼む。頼むときは操作を 1 行で書く
 - Tableau Public に出す版では、ダッシュボードに載せたワークシートを非表示にする。XML ではそのシートの `<window class='worksheet'>` に `hidden='true'` を付ける（Desktop ではダッシュボードのタブの右クリックから「すべてのシートを非表示」）
-- 問題なければ Step 5 の最後の publish が公開版になる。`refine/publish-result.json` の `webpageUrl` を次の `create-x-post` が読む
+- 問題なければ Step 5 の最後の publish が公開版になる。`refine/publish-result.json` の `webpageUrl` を `create-x-post` が読む
+- 次に `create-requirements` の「確定」で、要件文を完成した表示に合わせて仕上げる。この時点の `requirements-{ja,en}.md` はドラフトで、refine ループで消えた・変わった要素が残っている
 
 ## 参照ファイル
 

@@ -1,119 +1,133 @@
+---
+purpose: WOW 要件ページ（Introduction / Requirements / Dataset）を書くときの規範
+sources:
+  - https://workout-wednesday.com/category/tableau/
+fetched_at: 2026-10-04
+note: workout-wednesday.com の実際の投稿の構成と、過去の出題で受けたレビューから抽出した規範。手順（いつ何を書くか）は SKILL.md 側にある
+---
+
 # WOW 要件ページ スタイルガイド
 
-workout-wednesday.com の実際の投稿を分析して策定。要件文作成時に必ず参照すること。
-
----
+## 目次
+- ページ構成
+- Introduction の書き方
+- Requirements の書き方
+- Dataset の書き方
+- タイトル
+- テンプレート（英語版）
+- HTML版（サイト掲載用）
 
 ## ページ構成
 
-WOWの要件ページは **Introduction** と **Requirements** の2セクションで構成される。
-Data、Hints、参考リンク等はサイト上の定型要素として別途存在するため、要件文としては上記2つだけを書く。
+WOW の出題ページは Introduction → Requirements → Dataset の順に並ぶ。その後に Attribute / Share / Solution などサイト定型の節が続く。
 
----
+- 要件文として書くのは Introduction・Requirements・Dataset の3節
+- Hints の独立した節は通常ない。ヒントを出すなら Introduction か Requirements の該当行に添える
 
 ## Introduction の書き方
 
-### トーン
-- フレンドリーでカジュアル。堅すぎない
-- 「なぜこのチャレンジを作ったか」「何にインスパイアされたか」を1〜2段落で
-- 参加者が学べることを自然に伝える（箇条書きではなく文章で）
-
-### よくあるパターン
-- 個人的な動機やエピソードから入る（「〜に出会って面白いと思った」「〜が気になっていた」）
-- 技術的な背景を簡潔に説明する
-- 難易度への言及（「初めてのチャレンジにちょうどいい」「少し歯ごたえがあるかも」など、カジュアルに）
+### 規範
+- 英語版で 120 語以内を目安に、1〜2段落で書く
+- 「なぜ今このチャレンジか」を作者自身の考えとして書く。製品の機能紹介や発表内容の要約を主役にしない
+- 後半で、参加者が作るものを 1〜2 文で示す（箇条書きにしない）
+- 読者が知らない前提（イベント名・独自の用語）は 1 文で補うか、使わない
+- 他人の発言や発表を根拠にするときは、ユーザーの一次資料（メモ・書き起こし）に基づく。Web 検索の要約を引用のように書かない
+- 締めは "Have fun with it!" のような定型の一言でよい
 
 ### 避けるべきこと
-- 学習目標を箇条書きで列挙する（論文風になる）
-- 過度に説明的・教科書的な文体
-- em dash（`—`）をつなぎに使う（AI生成感が出るため。ピリオドやコンマで区切る）
+AI 生成感の出る書き方を避ける。
 
----
+- em dash（`—`）でのつなぎ。ピリオドやコンマで区切る
+- コロンで言い換える文が続く
+- 自分で問いを立て、直後に自分で答える
+- 宣伝口調（"powerful", "game-changing" など）
+- 本文をまとめ直すだけの締めの一文
+- 学習目標の箇条書きや、教科書的な文体
 
 ## Requirements の書き方
 
-### 形式
-- **フラットな箇条書き**（サブセクションに分割しない）
-- 1行1要件で簡潔に
-- ネストは1段階まで（選択肢の列挙など）
+### 中心原則：画像から読めないことだけを書く
 
-### よく記載される項目
-- ダッシュボードサイズ（必須）
-- シート数（必須）
-- パラメータの仕様（名前、型）
-- 何を表示するか（「Profit Ratioを表示する」）
-- チャートの構成要素（線の本数、比較対象など）
-- 色分けやラベルの条件
-- 「Match the tooltips and formatting as closely as possible」（定型文）
+参加者は完成したダッシュボードを見ながら再現する。見れば分かることは "Match the formatting as closely as possible" に任せ、要件には見ても分からないことだけを書く。
 
-### 書き方のルール
-- **「何を」は書く、「どう計算するか」は書かない** — 計算式（`SUM(Profit)/SUM(Sales)`等）は参加者に委ねる
-- **目的や意図は簡潔に添える** — 「〜を判断するために」程度。長い説明は不要
-- 技術用語は適度に使う。過剰な説明は不要（WOW参加者はTableauユーザー）
+| 書く（画像から読めない） | 書かない（画像で分かる・既定のまま） |
+|---|---|
+| ダッシュボードサイズ | チャートの種類・配置・並び順 |
+| パラメータの選択肢と初期値 | 色・フォント・ラベルや凡例の有無と位置 |
+| 期間・比較対象の定義 | ツール既定のままの設定（週の開始曜日など） |
+| 判定・色分けの条件と、境界の扱い | 使うデータ（Dataset 節に書く） |
+| 各数字が何を表すか | |
+| 表示する要素の一覧（要素ごとに何を出すか） | |
+| 制作上の制約（Web Authoring のみ、シート数の上限など） | |
+
+### 書き方
+- 肯定形で書く。「〜しない」型の要件は、するべきことに言い換えるか削る
+  - 例：「平均に今週を含めない」→「今週の直前13週と比べる」
+- 「何を」だけを書く。選んだ理由や意図は Introduction に回す
+- 用語は 1 語 1 義で使う。Introduction と要件で同じ語を別の意味に使わない
+- 閾値や範囲の境界がどちら側に入るかを書く。区分同士が重ならないようにする
+- 計算式や Tableau の関数名・機能名を書かない。解き方は参加者に委ねる
+- 関連する要件は親項目の下にネストしてまとめる（3段まで可）。子が 1 行しかない親は平らに戻す
+- 節見出し（`### KPIカード` 等）で分割しない。まとまりはネストで作る
 
 ### 避けるべきこと
-- サブセクション見出し（`### KPIカード` `### トレンドライン` 等）で分割する
-- 計算式やTableau関数名を明示する
-- 冗長な説明（「基準日を起点に過去14日間。Day -14からDay 0で途切れる」→ 「直近14日間」で十分）
-- 他の要素から一目で読める情報を、別の要素やシートで繰り返す要件（例：範囲外のタイルが濃い色と ▲ / ▼ で分かるのに、範囲外の件数も出させる。パラメータに週が出ているのに、同じ週を見出しにも出させる）。参加者の手順が増えるだけで、ダッシュボードの答えは変わらない
+- 冗長な説明（「基準日を起点に過去14日間。Day -14からDay 0で途切れる」→「直近14日間」で十分）
+- 他の要素から一目で読める情報を、別の要素やシートで繰り返させる要件（例：範囲外のタイルが濃い色と ▲ / ▼ で分かるのに、範囲外の件数も出させる）。参加者の手順が増えるだけで、ダッシュボードの答えは変わらない
 
----
+悪い例（順に：既定のままの設定、否定形と理由の添え書き、解法ヒントと画像で分かる見た目）:
+
+```markdown
+- Weeks start on Sunday
+- No value labels on the charts (this week's value is in the tile headers)
+- Row 1 charts: bars for the previous 13 weeks with the range band (the Analytics pane is enough). Set this week's bar slightly apart
+```
+
+## Dataset の書き方
+
+- データ名とリンクだけを書く。説明は付けても 1 文まで
+- WOW 共通の Superstore ならデータ名だけでよい
 
 ## タイトル
 
-形式: `#WOW{YYYY} W{N}: Can You {動詞}...?`
+形式: `#WOW{YYYY} W{N}: Can You {動詞}...?`（例: `Can You Build a KPI Trigger Monitor?`）
 
-例:
-- `Can You Build a KPI Trigger Monitor?`
-- `Can you create a dynamic moving average?`
-- `Can you create a fake Viz in Tooltip?`
-
-「Can you」で始まる疑問形が標準。
-
----
+- 「Can you」で始まる疑問形が標準
+- 作るものの性格が伝わる具体語を選ぶ。どの出題にも当てはまる汎用語（Performance Dashboard など）や製品名は避ける
 
 ## テンプレート（英語版）
+
+構造の目安。要件の行数やネストは出題に合わせて変えてよい。
 
 ```markdown
 # WOW{YYYY} W{N}: {Title}
 
 ## Introduction
 
-{1-2 paragraphs: Why this challenge? What inspired it? What will participants learn?}
+{1-2 paragraphs, about 120 words: why this challenge now, then what participants will build}
 
 ## Requirements
 
 - Dashboard size: {width} x {height}
-- {N} sheet(s)
-- {Requirement 1}
-- {Requirement 2}
-- {Requirement 3}
+- {Parameter: choices and default}
+- {Definition or rule}
+  - {Detail}
+- Elements to show:
+  - {Element}
+    - {What it shows}
 - Match the tooltips and formatting as closely as possible
+
+## Dataset
+
+{Data name and link}
 ```
 
 日本語版のテンプレートは不要。出題者との会話の中で自然に生成する。
 
----
-
 ## HTML版（サイト掲載用）
 
-英語版MDファイルの末尾に、HTMLコメントとしてサイト掲載用のHTML版を埋め込む。MDプレビューには表示されず、ファイルを開けばコピペできる。
+英語版MDファイルの末尾に、`<!-- HTML VERSION (for site posting)` で始まる HTML コメントとして、サイト掲載用の HTML 版を埋め込む。MDプレビューには表示されず、ファイルを開けばコピペできる。
 
-```markdown
-<!-- HTML VERSION (for site posting)
-
-<h2>Introduction</h2>
-<p>...</p>
-
-<h2>Requirements</h2>
-<ul>
-<li>...</li>
-</ul>
-
--->
-```
-
+- 見出しは `<h2>`、段落は `<p>`、要件は `<ul>` / `<li>` で書く。ネストした箇条書きは、親の `<li>` の中に `<ul>` を入れる
 - MD版の内容と同期させること（MD側を修正したらHTML版も更新する）
 - 別ファイルとしては作成しない（1ファイルで管理）
 - ファイル名やキーワードは、MD版でバッククォートで囲んでいても、HTML版では `<code>` タグを使わずプレーンテキストで記述する（掲載先サイトのスタイルと干渉するため）
-
