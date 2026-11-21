@@ -6,15 +6,20 @@ __pycache__/
 # ---- Shared template workbook (copied in locally, not redistributed) -----
 common/
 
-# ---- Per-challenge working folders (outputs/{theme}/) --------------------
-# Only discussion.md, requirements-{ja,en}.md and x-post.txt are tracked.
-# tmp/       intermediates, scripts, screenshots, blog notes
-# prototype/ draft HTML
-# refine/    refine loop: working .twbx, wb-build, compare page, Cloud renders, publish results
-outputs/*/tmp/
-outputs/*/prototype/
-outputs/*/refine/
-# Non-public per-challenge assets
+# ---- Per-challenge folders (outputs/{theme}/) ----------------------------
+# Allowlist: everything in a theme folder is ignored unless listed below.
+# Anything else that should be public goes under outputs/{theme}/public/.
+# Files tracked before this rule stay tracked.
+outputs/*/*
+!outputs/*/discussion.md
+!outputs/*/requirements-ja.md
+!outputs/*/requirements-en.md
+!outputs/*/x-post.txt
+!outputs/*/guide/
+outputs/*/guide/*
+!outputs/*/guide/build-guide.html
+!outputs/*/public/
+# Non-public per-challenge assets (also outside outputs/)
 **/Archived/
 # Third-party datasets (license-bound; fetch via the documented steps)
 outputs/*/Dataset/

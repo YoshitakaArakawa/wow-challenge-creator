@@ -33,7 +33,15 @@ Workout Wednesday (WOW) の Tableau 出題を作成するための支援環境�
 
 `outputs/YYYY-MM-DD-テーマ名/` に出題用フォルダを作る（英語ケバブケース、例: `outputs/2026-02-05-sankey-drilldown/`）。テーマ未定なら仮名で作成し、確定後にリネーム。すべての Skill はこのフォルダを共通ワークスペースとして読み書きし、ファイルで連携する。
 
-テーマ直下には Markdown（`discussion.md`・`requirements-{ja,en}.md`）と `x-post.txt` だけを置く。重いファイルは次のサブフォルダに分ける（いずれも gitignore 済み）:
+出題フォルダは `.gitignore` の許可リストで管理する。git に入るのは次のものだけで、それ以外は置いても無視される。
+
+| 追跡するもの | 中身 |
+|---|---|
+| `discussion.md`・`requirements-{ja,en}.md`・`x-post.txt` | テーマ直下の記録と公開文 |
+| `guide/build-guide.html` | 作り方の解説（画像埋め込みの 1 ファイル） |
+| `public/` | 上に収まらない公開物（データ生成スクリプト・補足の解説など） |
+
+作業中のファイルは次のサブフォルダに分ける（どれも追跡しない）:
 
 | サブフォルダ | 中身 |
 |---|---|
@@ -41,6 +49,8 @@ Workout Wednesday (WOW) の Tableau 出題を作成するための支援環境�
 | `refine/` | 作業用 `YYYYWNN.twbx`・展開した TWB・Cloud 描画・publish 結果 |
 | `tmp/` | その他の中間生成物・スクリプト |
 | `Archived/` | 出題ごとの非公開アセット |
+
+公開したいファイルを新しく足すときは、`public/` に置くか、`.gitignore` の許可リストに加える。
 
 ## パイプライン
 

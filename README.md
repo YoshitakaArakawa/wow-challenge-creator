@@ -69,7 +69,7 @@ python .claude/skills/publish-to-cloud/scripts/tableau_auth.py login
   create-x-post/       # X (Twitter) 投稿文
   search-tableau-features/    # Tableau Desktop 機能検索（キャッシュ付き）
 common/                # 共通アセット (テンプレートTWBX、サンプルデータ。gitignore対象で、手元に配置する)
-outputs/               # 出題フォルダ（Markdown と x-post.txt を追跡。prototype/・refine/・tmp/ は gitignore対象）
+outputs/               # 出題フォルダ（許可リスト型: Markdown・x-post.txt・guide/build-guide.html・public/ だけを追跡）
 examples/              # 出題例（WOW2026 W12: https://www.workout-wednesday.com/2026w12tab/）
 ```
 
