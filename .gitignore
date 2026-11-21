@@ -9,6 +9,7 @@ common/
 # ---- Per-challenge folders (outputs/{theme}/) ----------------------------
 # Allowlist: everything in a theme folder is ignored unless listed below.
 # Anything else that should be public goes under outputs/{theme}/public/.
+# Every HTML page in guide/ is public and is served by GitHub Pages.
 # Files tracked before this rule stay tracked.
 outputs/*/*
 !outputs/*/discussion.md
@@ -17,7 +18,7 @@ outputs/*/*
 !outputs/*/x-post.txt
 !outputs/*/guide/
 outputs/*/guide/*
-!outputs/*/guide/build-guide.html
+!outputs/*/guide/*.html
 !outputs/*/public/
 # Non-public per-challenge assets (also outside outputs/)
 **/Archived/
