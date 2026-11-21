@@ -16,25 +16,15 @@ In this challenge, you'll build one of those. It gives four Yes / No answers, ea
 - For each comparison:
   - Answer Yes if this week is at or above the comparison average, otherwise No
   - The range is the average ± 1 sample standard deviation. Values on the bounds count as inside
-  - Color by where this week sits, in four levels:
-    - Above the range
-    - Inside the range, at or above the average
-    - Inside the range, below the average
-    - Below the range
-  - Add ▲ / ▼ to the answers outside the range
-- Elements to show:
-  - Header
-    - The four answers as tiles
-    - This week's value for each metric
-  - KPI cards (per question and metric)
-    - The $ gap from the average, and the average itself
-    - When outside the range, also how far this week is past the bound
-  - Chart for "better than usual?"
-    - Bars for the weekly values of the previous 13 weeks and this week
-    - The range and average of the comparison period. Keep them off this week's bar
-  - Chart for "better than the same time last year?"
-    - Lines for the weekly values of this year's 13 weeks and last year's 13 weeks
-    - Last year's range and average
+  - Color by where this week sits, and add ▲ / ▼ to the answers outside the range:
+    - Above the range: dark blue (#2063b0)
+    - Inside the range, at or above the average: light blue (#a6c0e1)
+    - Inside the range, below the average: light red (#e4a59f)
+    - Below the range: dark red (#a83634)
+- Header: the four answers as tiles, with this week's value for each metric
+- KPI cards: the $ gap from the average and the average itself, plus how far this week is past the bound when outside the range
+- Bar chart (better than usual?): the previous 13 weeks and this week, with the range and average kept off this week's bar
+- Line chart (same time last year?): this year's and last year's 13 weeks, with last year's range and average
 - Match the formatting as closely as possible
 
 <!-- HTML VERSION (for site posting)
@@ -57,45 +47,20 @@ In this challenge, you'll build one of those. It gives four Yes / No answers, ea
 <ul>
 <li>Answer Yes if this week is at or above the comparison average, otherwise No</li>
 <li>The range is the average ± 1 sample standard deviation. Values on the bounds count as inside</li>
-<li>Color by where this week sits, in four levels:
+<li>Color by where this week sits, and add ▲ / ▼ to the answers outside the range:
 <ul>
-<li>Above the range</li>
-<li>Inside the range, at or above the average</li>
-<li>Inside the range, below the average</li>
-<li>Below the range</li>
-</ul>
-</li>
-<li>Add ▲ / ▼ to the answers outside the range</li>
-</ul>
-</li>
-<li>Elements to show:
-<ul>
-<li>Header
-<ul>
-<li>The four answers as tiles</li>
-<li>This week's value for each metric</li>
-</ul>
-</li>
-<li>KPI cards (per question and metric)
-<ul>
-<li>The $ gap from the average, and the average itself</li>
-<li>When outside the range, also how far this week is past the bound</li>
-</ul>
-</li>
-<li>Chart for "better than usual?"
-<ul>
-<li>Bars for the weekly values of the previous 13 weeks and this week</li>
-<li>The range and average of the comparison period. Keep them off this week's bar</li>
-</ul>
-</li>
-<li>Chart for "better than the same time last year?"
-<ul>
-<li>Lines for the weekly values of this year's 13 weeks and last year's 13 weeks</li>
-<li>Last year's range and average</li>
+<li>Above the range: dark blue (#2063b0)</li>
+<li>Inside the range, at or above the average: light blue (#a6c0e1)</li>
+<li>Inside the range, below the average: light red (#e4a59f)</li>
+<li>Below the range: dark red (#a83634)</li>
 </ul>
 </li>
 </ul>
 </li>
+<li>Header: the four answers as tiles, with this week's value for each metric</li>
+<li>KPI cards: the $ gap from the average and the average itself, plus how far this week is past the bound when outside the range</li>
+<li>Bar chart (better than usual?): the previous 13 weeks and this week, with the range and average kept off this week's bar</li>
+<li>Line chart (same time last year?): this year's and last year's 13 weeks, with last year's range and average</li>
 <li>Match the formatting as closely as possible</li>
 </ul>
 

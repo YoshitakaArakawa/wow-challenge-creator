@@ -1,0 +1,7 @@
+#WOW2026 #Tableau Week 40 is live!
+
+Let's build a weekly check-in dashboard sized for your phone. Four Yes / No answers, each with a number and a small chart showing whether the week is just noise or worth a look.
+
+Have fun!
+
+https://www.workout-wednesday.com/2026w40tab/
