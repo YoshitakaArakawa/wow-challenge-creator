@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{WOWYYYY WNN}} Walkthrough</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
 <style>
-/* Layout: 1 本の縦長の手順書。左に章番号のレール、右に本文と Tableau 風の画面の模式図。明るい配色に固定（Tableau の描画が白背景のため） */
+/* Layout: one long page. Chapter numbers on a left rail; text and Tableau-style screen mock-ups on the right. Light colours only, because Tableau renders on white */
 :root {
   --bg: #f7f8fa;
   --paper: #ffffff;
@@ -26,9 +26,6 @@
   --font-body: "IBM Plex Sans JP", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
   --font-mono: "IBM Plex Mono", "Consolas", "Menlo", monospace;
   --why-bg: #f4f7fb;
-  /* 出題の色。色の割り当て（twb-spec.md）から入れ、確認の表の色見本（.sw）に使う */
-  --c1: {{色 1}};
-  --c2: {{色 2}};
   color-scheme: light;
 }
 
@@ -79,7 +76,7 @@ pre .cm { color: var(--muted); }
 .tag.agg { background: var(--pill-cont-bg); color: var(--pill-cont); }
 .tag.tc { background: var(--pill-calc-bg); color: var(--hl); }
 
-/* Tableau 風のワークシート画面 */
+/* Tableau-style worksheet view */
 .tbl { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .tbl-title { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center;
   padding: 8px 12px; background: var(--ui-bar); border-bottom: 1px solid var(--line); font-size: 13px; }
@@ -111,7 +108,7 @@ pre .cm { color: var(--muted); }
 .settings ul { margin: 0; padding-left: 18px; }
 ul.settings { margin: 0; padding-left: 28px; }
 
-/* 表計算の設定ダイアログ */
+/* Table calculation dialog */
 .dlg-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
 .dlg { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; font-size: 13px; min-width: 0;
   box-shadow: 0 6px 18px rgba(20, 30, 45, .08); }
@@ -135,7 +132,7 @@ ul.settings { margin: 0; padding-left: 28px; }
 .order { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
 .why { font-size: 12.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 6px; }
 
-/* 数値の表 */
+/* Number tables */
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
 table { border-collapse: collapse; width: 100%; font-size: 13px; }
 th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -144,7 +141,7 @@ tr:last-child td { border-bottom: 0; }
 td.num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 12.5px; white-space: nowrap; }
 .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 4px; }
 
-/* ダッシュボードの配置図 */
+/* Dashboard layout diagram */
 .layout { display: grid; gap: 6px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
 .lay-row { display: flex; gap: 4px; min-width: 0; }
 .lay { border: 1px dashed var(--line); border-radius: 4px; padding: 8px 4px; font-size: 11.5px; text-align: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -153,31 +150,31 @@ td.num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); font
 
 footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 4px; }
 
-/* ---- 手順書の部品 ---- */
-/* 「やること」「ヒント」の囲み */
+/* ---- Walkthrough parts ---- */
+/* To-do and hint boxes */
 .todo { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 8px; }
 .todo h3 { font-size: 15px; }
 .todo ol, .todo ul { margin: 0; padding-left: 22px; display: grid; gap: 4px; }
 .hint { background: var(--why-bg); border-radius: 8px; padding: 14px 18px; display: grid; gap: 6px; font-size: 14px; }
 .hint h3 { font-size: 14px; color: var(--accent); }
 .hint ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
-/* 答えの折りたたみ */
+/* Answer boxes */
 .ans { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; }
 .ans > .ans-h { padding: 10px 16px 0; font-weight: 700; font-size: 14px; color: var(--accent); }
 .ans > .ans-body { padding: 4px 16px 18px; display: grid; gap: 18px; min-width: 0; }
-/* 確認（期待値） */
+/* Check (expected values) */
 .expect { border: 1px solid var(--pill-cont); background: #f3faf5; border-radius: 8px; padding: 14px 18px; display: grid; gap: 10px; font-size: 14px; }
 .expect h3 { font-size: 14px; color: var(--pill-cont); }
-/* 差し替え・追加・削除するピル */
+/* Pills to add, replace or remove */
 .pill.chg { outline: 2px dashed var(--hl); outline-offset: 1px; }
 .pill.del { text-decoration: line-through; opacity: .55; }
 .pill.new { box-shadow: 0 0 0 2px var(--hl); }
 .mark-note { font-size: 11px; color: var(--hl); font-weight: 500; white-space: nowrap; }
-/* Measure Values カード */
+/* Measure Values card */
 .mv { border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; display: grid; gap: 4px; }
 .mv .card-h { margin-bottom: 2px; }
 .mv .pill { justify-self: start; }
-/* Tableau のテキスト表を模した表 */
+/* Table styled like a Tableau text table */
 .viz { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
 .viz table { font-size: 13px; }
 .viz th { background: var(--paper); color: var(--ink); font-weight: 700; border-bottom: 1px solid var(--ink); }
@@ -186,7 +183,7 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
 .viz th.r { text-align: right; }
 .viz td.zero { color: var(--muted); }
 .viz td.key { background: #fff7ec; font-weight: 500; }
-/* 全体図の積み上げ */
+/* Overview stack */
 .stack { display: grid; gap: 4px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
 .stack .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; font-size: 13px; background: var(--bg); }
 .stack .row.new { border: 1.5px solid var(--hl); background: #fff7ec; }
@@ -194,7 +191,7 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
 .stack .row .st { font-size: 11px; color: var(--hl); font-weight: 700; }
 .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); }
 .legend span { display: inline-flex; gap: 6px; align-items: center; }
-/* 部品の分解図 */
+/* Component tree */
 .tree { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-size: 13px; }
 .tree ul { list-style: none; margin: 0; padding-left: 22px; }
 .tree > ul { padding-left: 0; }
@@ -211,9 +208,9 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
 .node.reuse .st { color: var(--accent); }
 .tree-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 10px; }
 .tree-legend .node { padding: 0 8px; font-size: 12px; }
-/* 計算の使われる場所 */
+/* Where a calculation is used */
 .where { font-size: 12px; font-weight: 400; color: var(--accent); background: var(--why-bg); border-radius: 4px; padding: 1px 8px; }
-/* 章の中の小見出し */
+/* Subheadings within a chapter */
 .sub { display: flex; gap: 10px; align-items: baseline; padding-bottom: 6px; border-bottom: 2px solid var(--line); }
 .sub .n { font-family: var(--font-mono); font-size: 12px; color: var(--paper); background: var(--accent); border-radius: 4px; padding: 0 7px; }
 .sub h3 { font-size: 17px; }
@@ -231,21 +228,20 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
 .view { border: 1px solid var(--line); border-radius: 4px; background: #fff; padding: 8px; }
 .view img { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; }
 .sorti { width: 11px; height: 9px; flex: none; }
-/* 第 1 部・第 2 部の扉 */
+/* Section openers */
 .part { margin-top: 88px; padding: 18px 22px; border-radius: 10px; background: var(--accent); color: var(--paper); display: grid; gap: 6px; }
 .part .eyebrow { color: var(--paper); opacity: .8; }
 .part h2 { color: var(--paper); }
 .part p { max-width: 72ch; }
 
+:lang(en) { --font-body: "IBM Plex Sans", sans-serif; }
 </style>
 </head>
 <body>
 <div class="wrap">
 <!--
   手順書のテンプレート（日本語版）。{{...}} を埋め、要らない部品は消す。
-  章の型・部品の使い方は SKILL.md の Step 5 にある。画像は embed:<テーマフォルダからの相対パス> で参照する。
-  英語版は同じ構造のまま訳す（lang="en"、--font-body の先頭に "IBM Plex Sans"、Google Fonts に IBM+Plex+Sans を足す）。
-  英語版では CSS とこのコメントの日本語も訳すか消す（Step 6 の CJK 検査に掛かるため）。
+  画像は embed:<テーマフォルダからの相対パス> で参照する。英語版は lang="en" にして本文を訳し、このコメントを消す。
 -->
 
 <header class="top">
@@ -264,7 +260,7 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
   <div class="step-no">全体</div>
   <div class="step-body">
     <div class="lead">
-      <h2 id="ov">{{見出し（例: 作るシートは 9 枚）}}</h2>
+      <h2 id="ov">{{見出し（例: 作るシートは N 枚）}}</h2>
       <p>{{ダッシュボードの構成を 1〜2 文}}</p>
     </div>
     <figure class="shot ctx"><img src="embed:{{完成版ダッシュボードの描画}}" alt="完成版のダッシュボード"><figcaption class="caption">完成版のダッシュボード（フィルターなし）</figcaption></figure>
@@ -311,7 +307,7 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
 <!-- ============ 第 1 部の扉 ============ -->
 <div class="part" role="note">
   <div class="eyebrow">第 1 部</div>
-  <h2>{{定番部分の名前（例: 普通のサンキーを組む）}}</h2>
+  <h2>{{定番部分の名前（例: 基本の棒グラフを組む）}}</h2>
   <p>{{第 1 部で作るものを 1〜2 文}}</p>
 </div>
 
@@ -413,19 +409,15 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
         <h3>確認：この値が出れば正解（フィルターなし）</h3>
         <div class="viz"><table>
           <thead><tr><th>{{ディメンション}}</th><th class="r">{{計算}}</th></tr></thead>
-          <tbody><tr><td class="dim"><span class="sw" style="background:var(--c1)"></span>{{値}}</td><td class="num key">{{照合スクリプトの値}}</td></tr></tbody>
+          <tbody><tr><td class="dim"><span class="sw" style="background:{{色コード}}"></span>{{値}}</td><td class="num key">{{照合スクリプトの値}}</td></tr></tbody>
         </table></div>
         <p>{{値の読み方。合わないときに確かめる設定}}</p>
       </div>
 
-      <!-- 最後の手順。確認の囲みは「手順を終えた画面」の後に置く -->
-      <h4>手順 {{n}}：シートを組み、表計算の方向を決める</h4>
+      <h4>手順 {{n}}：シートを組む</h4>
       <p class="note"><b>新規シートなので、書式は自分で付けます。</b>次の {{n}} つを忘れると、{{何が}}完成図と変わります。</p>
-      <ul class="settings" style="border-top:0;padding-top:0"><li>{{並べ替え・軸の固定と反転など}}</li></ul>
-      <div class="tbl">
-        <div class="tbl-title"><b>{{シート名}}（手順を終えた画面）</b><span class="caption">フィルターなし、軸を表示して描画したもの（完成版では軸を隠す）</span></div>
-        <!-- ゴールのシートと同じ .tbl-main を置く（.new を外す） -->
-      </div>
+      <ul class="settings" style="border-top:0;padding-top:0"><li>{{並べ替え・軸・書式など}}</li></ul>
+      <p>組み終えると、①のゴールのシートと同じ表示になります。</p>
     </div>
   </div>
 </section>
@@ -450,9 +442,9 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
       <h3>やること</h3>
       <ol>
         <li>ダッシュボードのサイズを {{幅 × 高さ}} の固定にする</li>
-        <li>{{コンテナー}}にシートを上から {{並び}} の順に置き、各シートのタイトルを隠す</li>
+        <li>{{シートの置き方と並び、タイトルの表示}}</li>
         <li>{{固定の高さ・余白}}</li>
-        <li>{{フィルターの表示（データソース全体のフィルターなので、どのシートから表示してもよい）}}</li>
+        <li>{{フィルター・パラメーターの表示}}</li>
       </ol>
     </div>
     <ul class="settings" style="border-top:0;padding-top:0"><li>{{章で触れなかった書式（色・枠線・ラベルの書式など）}}</li></ul>
@@ -462,7 +454,7 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
 
 <footer>
   <div>データ：{{データの名前と版}}。</div>
-  <div>式・シェルフ・表計算の設定は、完成版のワークブックから抜き出したもの。数値は元データから再計算した値（0〜1 の割合は小数 3 桁）。</div>
+  <div>式・シェルフ・表計算の設定は、完成版のワークブックから抜き出したもの。数値は元データから再計算した値。</div>
 </footer>
 </div>
 </body>

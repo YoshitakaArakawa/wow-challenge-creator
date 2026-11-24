@@ -76,9 +76,9 @@ note: 日本語版で書いた語を英語版でどう書くかの表。UI 語�
 | 日本語版 | 英語版 |
 |---|---|
 | 全体 | OVERVIEW |
-| 章 N | PART N |
-| 終章 | FINAL |
-| 第 1 部 / 第 2 部 | Section 1 / Section 2 |
+| 章 N | CHAPTER N |
+| 終章 | FINAL CHAPTER |
+| 第 1 部 / 第 2 部 | Part 1 / Part 2 |
 | ゴールのシート | Target sheet |
 | このシートのディメンション | Dimensions on this sheet |
 | 部品の分解図 | Component tree |
@@ -91,7 +91,7 @@ note: 日本語版で書いた語を英語版でどう書くかの表。UI 語�
 | 〜（手順を終えた画面） | ... (after the steps) |
 | フィルターなしで描画したもの | Rendered with no filter |
 | このシートが描く部分（オレンジの枠）。完成版のダッシュボードをフィルターなしで描画したもの | The part this sheet draws (orange frame), from the finished dashboard rendered with no filter |
-| 作る / 前の章 / データ（分解図の凡例） | Build / Earlier part / Data |
+| 作る / 前の章 / データ（分解図の凡例） | Build / Earlier chapter / Data |
 | 行レベル / 集計 / 表計算 / 表計算を参照（計算のタグ） | Row level / Aggregate / Table calc / Uses a table calc |
 | 置かない（ディメンションの表） | Not placed |
 | 〜の中（計算の使われる場所） | Inside ... |
@@ -104,5 +104,5 @@ note: 日本語版で書いた語を英語版でどう書くかの表。UI 語�
 - UI 語は二重引用符で囲む。例: Right-click the pill and select "Edit Table Calculation..."
 - 手順の動詞は命令形で書く（Create, Drag, Set, Check）
 - 日本語版の「〜します」の説明文は、現在形の平叙文にする（The band narrows to a point.）
-- 範囲は "0 to 1"、矢印の並び（Loss → Gains）はそのまま使う
-- 数値の書式（小数 3 桁、`$` 付きの整数）は日本語版と同じにする
+- 範囲は "A to B" と書き、矢印の並び（A → B）はそのまま使う
+- 数値の書式は日本語版と同じにする
