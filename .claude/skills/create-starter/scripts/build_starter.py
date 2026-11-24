@@ -1,18 +1,20 @@
 """Build a starter workbook from a finished WOW workbook.
 
 The starter keeps the sheets handed to participants and removes the rest:
-worksheets, their windows/thumbnails, and every calculated field that only the
-removed sheets need (decided on the dependency tree). Dashboard zones of the
-removed sheets become blank zones of the same size, so the layout keeps its gaps.
-Shared filters, colors and formatting stay as they are.
+worksheets, their windows/thumbnails, actions that start from them, and every
+calculated field that nothing left in the workbook needs (decided on the
+dependency tree). Dashboard zones of the removed sheets become blank zones of
+the same size, so the layout keeps its gaps. Shared filters, datasource filters,
+sets, colors and formatting stay as they are.
 
 Usage:
-  python build_starter.py --twbx <final.twbx> (--keep "A,B" | --remove "C,D")
+  python build_starter.py --twbx <final.twbx|final.twb> (--keep "A,B" | --remove "C,D")
                           [--out <YYYYWNN_Starter.twbx>] [--dry-run]
 
 --dry-run prints the plan (kept/removed sheets and calcs, blank zones) as JSON
 and writes nothing. Without it, the starter .twbx and its .twb are written next
-to each other and the same JSON report is printed, with leftover references.
+to each other and the same JSON report is printed. Exit code 2 when the report
+has leftover references or warnings.
 """
 import argparse
 import json
@@ -23,10 +25,17 @@ from pathlib import Path
 
 from lxml import etree
 
-# Zone coordinates are in 1/100000 of the dashboard size (Tableau's zone unit)
+# Zone coordinates are in 1/100000 of the dashboard (or device layout) size
 ZONE_UNIT = 100000
-# Element types inside a dashboard that point at a sheet by name besides worksheet zones
-SHEET_REF_ATTRS = ("name", "worksheet", "source-sheet", "target-sheet")
+# Elements inside a datasource that only describe a field (where it sits in the
+# data pane, its color, its instances). They do not make a calc needed, and they
+# are deleted together with the calc. Anything else in a datasource that names a
+# calc (filters, sets, drill paths, extract filters) keeps the calc alive.
+DESCRIPTIVE_TAGS = {"column-instance", "folder-item", "encoding", "map"}
+# Attributes that hold a display label, not a reference
+LABEL_ATTRS = {"caption", "alias"}
+# Matches [Datasource].[field] references
+QUALIFIED = re.compile(r"\[([^\[\]]+)\]\.\[([^\[\]]+)\]")
 
 
 def parse_args():
@@ -48,14 +57,14 @@ def split_names(s):
 
 
 def load(src: Path):
-    """Return (twb bytes, twb member name, zip members) from a .twbx or .twb."""
+    """Return (twb bytes, twb member name) from a .twbx or .twb."""
     if src.suffix.lower() == ".twb":
-        return src.read_bytes(), src.name, None
+        return src.read_bytes(), src.name
     with zipfile.ZipFile(src) as z:
         twbs = [n for n in z.namelist() if n.lower().endswith(".twb") and "/" not in n]
         if len(twbs) != 1:
             sys.exit(f"expected one .twb at the root of {src}, found {twbs}")
-        return z.read(twbs[0]), twbs[0], z
+        return z.read(twbs[0]), twbs[0]
 
 
 def inner(name):
@@ -63,60 +72,121 @@ def inner(name):
     return name[1:-1] if name.startswith("[") and name.endswith("]") else name
 
 
-def ref_pattern(names):
-    """Matches a field's inner name as a bracketed field or inside an instance name
-    such as [none:Calculation_1:nk]."""
-    alt = "|".join(re.escape(n) for n in sorted(names, key=len, reverse=True))
-    return re.compile(r"[\[:](" + alt + r")[\]:]")
-
-
 def text_of(el):
     return etree.tostring(el, encoding="unicode")
 
 
-def collect_calcs(root):
-    """{inner name: (datasource element, column element)} for calculated fields."""
-    calcs = {}
-    for ds in root.findall("./datasources/datasource"):
-        if ds.get("name") == "Parameters":
-            continue  # parameters are left as they are
-        for col in ds.findall("./column"):
-            if col.find("calculation") is not None:
-                calcs[inner(col.get("name"))] = (ds, col)
-    return calcs
+# ---------------------------------------------------------------- calcs
+
+class Calcs:
+    """Calculated fields keyed by (datasource name, inner name)."""
+
+    def __init__(self, root):
+        self.cols = {}
+        self.ds = {}
+        for ds in root.findall("./datasources/datasource"):
+            dsn = ds.get("name")
+            if dsn == "Parameters":
+                continue  # parameters are left as they are
+            self.ds[dsn] = ds
+            for col in ds.findall("./column"):
+                if col.find("calculation") is not None:
+                    self.cols[(dsn, inner(col.get("name")))] = col
+        self.names = {}
+        for dsn, n in self.cols:
+            self.names.setdefault(dsn, set()).add(n)
+
+    def caption(self, key):
+        return self.cols[key].get("caption") or key[1]
+
+    def pattern(self, dsn):
+        """Inner names of dsn's calcs, bare ([X]) or inside an instance ([none:X:nk])."""
+        names = self.names.get(dsn)
+        if not names:
+            return None
+        alt = "|".join(re.escape(n) for n in sorted(names, key=len, reverse=True))
+        return re.compile(r"[\[:](" + alt + r")[\]:]")
+
+    def unqualified(self, text, dsn):
+        pat = self.pattern(dsn)
+        return {(dsn, m) for m in pat.findall(text)} if pat else set()
+
+    def qualified(self, text):
+        out = set()
+        for dsn, field in QUALIFIED.findall(text):
+            names = self.names.get(dsn)
+            if not names:
+                continue
+            if field in names:
+                out.add((dsn, field))
+            else:
+                parts = field.split(":")
+                if len(parts) >= 3 and ":".join(parts[1:-1]) in names:
+                    out.add((dsn, ":".join(parts[1:-1])))
+        return out
+
+    def refs(self, el, default_ds=None):
+        """Calcs an element points at: [ds].[field] anywhere, plus bare names inside
+        <datasource-dependencies datasource=...> blocks (or default_ds)."""
+        out = self.qualified(text_of(el))
+        if default_ds:
+            out |= self.unqualified(text_of(el), default_ds)
+        for dd in el.iter("datasource-dependencies"):
+            out |= self.unqualified(text_of(dd), dd.get("datasource"))
+        return out
+
+    def closure(self, start):
+        seen, stack = set(), list(start)
+        while stack:
+            key = stack.pop()
+            if key in seen or key not in self.cols:
+                continue
+            seen.add(key)
+            stack.extend(self.refs(self.cols[key].find("calculation"), default_ds=key[0]))
+        return seen
 
 
-def used_calcs(root, calcs, kept_sheets, removed_sheets):
-    """Calcs reachable from what stays: kept worksheets, dashboards (minus removed
-    sheet zones), shared views and actions that do not touch removed sheets."""
-    pat = ref_pattern(calcs)
-    roots = []
-    for ws in root.findall("./worksheets/worksheet"):
-        if ws.get("name") in kept_sheets:
-            roots.append(text_of(ws))
-    for dash in root.findall("./dashboards/dashboard"):
-        d = etree.fromstring(text_of(dash))
-        for z in list(d.iter("zone")):
-            if z.get("name") in removed_sheets and z.get("type-v2") is None:
-                z.getparent().remove(z)
-        roots.append(text_of(d))
-    for tag in ("shared-views", "actions"):
+def used_calcs(root, calcs):
+    """Calcs reachable from everything left after the sheets were removed."""
+    start = set()
+    for tag in ("worksheets", "dashboards", "shared-views", "actions"):
         for el in root.findall(f"./{tag}"):
-            roots.append(text_of(el))
-    seen = set()
-    stack = [m for t in roots for m in pat.findall(t)]
-    while stack:
-        n = stack.pop()
-        if n in seen:
-            continue
-        seen.add(n)
-        formula = text_of(calcs[n][1].find("calculation"))
-        stack.extend(pat.findall(formula))
-    return seen
+            start |= calcs.refs(el)
+    for dsn, ds in calcs.ds.items():
+        for child in ds:
+            if child.tag == "column" and child.find("calculation") is not None:
+                continue  # a calc counts only when something reaches it
+            for el in child.iter():
+                if el.tag in DESCRIPTIVE_TAGS:
+                    continue
+                if el is child or el.getparent().tag not in DESCRIPTIVE_TAGS:
+                    start |= calcs.unqualified(" ".join(el.attrib.values()) + " " + (el.text or ""), dsn)
+    return calcs.closure(start)
+
+
+def remove_calcs(calcs, removed):
+    """Delete removed calcs and the descriptive elements that name them."""
+    by_ds = {}
+    for dsn, n in removed:
+        by_ds.setdefault(dsn, set()).add(n)
+    for dsn, names in by_ds.items():
+        alt = "|".join(re.escape(n) for n in sorted(names, key=len, reverse=True))
+        pat = re.compile(r"[\[:](" + alt + r")[\]:]")
+        for n in names:
+            col = calcs.cols[(dsn, n)]
+            col.getparent().remove(col)
+        for el in list(calcs.ds[dsn].iter(*DESCRIPTIVE_TAGS)):
+            if el.getparent() is not None and any(pat.search(v) for v in el.attrib.values()):
+                el.getparent().remove(el)
+
+
+# ---------------------------------------------------------------- sheets and actions
+
+def names_in(value):
+    return [v.strip() for v in value.split(",")]
 
 
 def remove_sheets(root, removed):
-    gone = []
     for path in ("./worksheets/worksheet", "./windows/window", "./thumbnails/thumbnail"):
         for el in root.findall(path):
             if el.get("name") in removed:
@@ -124,58 +194,80 @@ def remove_sheets(root, removed):
     for vp in list(root.iter("viewpoint")):
         if vp.get("name") in removed:
             vp.getparent().remove(vp)
-    # Actions whose source or target is a removed sheet cannot work in the starter
+
+
+def fix_actions(root, removed):
+    """Drop actions that start from or point at a removed sheet. Exclusion lists
+    only lose the removed names."""
+    dropped, edited = [], []
     for act in list(root.iter("action")):
-        t = text_of(act)
-        if any(f"'{s}'" in t or f'"{s}"' in t for s in removed):
-            gone.append(act.get("caption") or act.get("name"))
-            act.getparent().remove(act)
-    return gone
-
-
-def remove_calcs(root, calcs, removed_calcs):
-    """Drop the calc columns and everything in the datasources that names them
-    (column instances, folder items, color encodings, sorts)."""
-    if not removed_calcs:
-        return
-    pat = ref_pattern(removed_calcs)
-    for ds in {calcs[n][0] for n in removed_calcs}:
-        for el in list(ds.iter()):
-            parent = el.getparent()
-            if parent is None or el is ds:
+        label = act.get("caption") or act.get("name")
+        drop = False
+        for el in list(act.iter()):
+            if el is act:
                 continue
-            if el.tag == "column" and inner(el.get("name", "")) in removed_calcs:
-                parent.remove(el)
-            elif el.tag != "column" and any(pat.search(v) for v in el.attrib.values()):
-                parent.remove(el)
-    # Dashboard-level datasource-dependencies may still list them
-    for dd in root.iter("datasource-dependencies"):
-        for el in list(dd):
-            if any(pat.search(v) for v in el.attrib.values()):
-                dd.remove(el)
+            if el.tag == "exclude-sheet":
+                if el.get("name") in removed:
+                    el.getparent().remove(el)
+                    edited.append(label)
+                continue
+            for k, v in list(el.attrib.items()):
+                items = names_in(v)
+                hit = [i for i in items if i in removed]
+                if not hit or k in LABEL_ATTRS:
+                    continue
+                is_exclude = el.tag == "param" and "exclude" in (el.get("name") or "")
+                if is_exclude and k == "value":
+                    rest = [i for i in items if i not in removed]
+                    if rest:
+                        el.set(k, ",".join(rest))
+                    else:
+                        el.getparent().remove(el)
+                    edited.append(label)
+                else:
+                    drop = True
+        if drop:
+            dropped.append(label)
+            act.getparent().remove(act)
+    return dropped, sorted(set(edited) - set(dropped))
 
 
-def dashboard_px(dash):
-    size = dash.find("size")
+# ---------------------------------------------------------------- dashboards
+
+def layout_px(zone):
+    """(width px, height px) of the dashboard or device layout a zone belongs to.
+    None on an axis whose size is not fixed (automatic, range, scrolling)."""
+    node = zone.getparent()
+    while node is not None and node.find("size") is None:
+        node = node.getparent()
+    size = node.find("size") if node is not None else None
     if size is None:
         return None, None
-    w = size.get("maxwidth") or size.get("minwidth")
-    h = size.get("maxheight") or size.get("minheight")
-    return (int(w) if w else None), (int(h) if h else None)
+
+    def fixed(lo, hi):
+        a, b = size.get(lo), size.get(hi)
+        return int(b) if a and b and a == b else None
+
+    w = fixed("minwidth", "maxwidth")
+    h = fixed("minheight", "maxheight")
+    return w, h
+
+
+def is_sheet_zone(z, removed):
+    return z.tag == "zone" and z.get("name") in removed and z.get("type-v2") is None
 
 
 def blank_zones(root, removed, kept):
-    """Replace runs of adjacent removed-sheet zones with one blank zone each.
-    Retarget filter/legend zones that belong to a removed sheet."""
+    """Retarget filter/legend zones of removed sheets, then replace runs of
+    adjacent removed-sheet zones with one fixed blank zone each."""
     report, warnings = [], []
+    kept_ws = {ws.get("name"): text_of(ws) for ws in root.findall("./worksheets/worksheet")
+               if ws.get("name") in kept}
     for dash in root.findall("./dashboards/dashboard"):
-        width_px, height_px = dashboard_px(dash)
-        zones = list(dash.iter("zone"))
-        next_id = max((int(z.get("id")) for z in zones if (z.get("id") or "").isdigit()), default=0) + 1
+        ids = [int(z.get("id")) for z in dash.iter("zone") if (z.get("id") or "").isdigit()]
+        next_id = max(ids, default=0) + 1
 
-        # Filter / legend / highlighter zones carry the sheet they belong to in name=
-        kept_ws = {ws.get("name"): text_of(ws) for ws in root.findall("./worksheets/worksheet") if ws.get("name") in kept}
-        for z in zones:
+        for z in list(dash.iter("zone")):
             if z.get("type-v2") is not None and z.get("name") in removed:
                 field = z.get("param") or ""
                 inst = field.split("].[")[-1].rstrip("]") if field else ""
@@ -183,74 +275,96 @@ def blank_zones(root, removed, kept):
                 if target:
                     z.set("name", target)
                 else:
-                    warnings.append(f"zone {z.get('id')} ({z.get('type-v2')}) belongs to removed sheet "
-                                    f"'{z.get('name')}' and no kept sheet uses {field or 'its field'}; removed")
+                    warnings.append(f"zone {z.get('id')} ({z.get('type-v2')}) of removed sheet "
+                                    f"'{z.get('name')}': no kept sheet uses {field or 'its field'}; removed")
                     z.getparent().remove(z)
 
-        parents = {z.getparent() for z in dash.iter("zone") if z.get("name") in removed and z.get("type-v2") is None}
+        parents = {z.getparent() for z in dash.iter("zone") if is_sheet_zone(z, removed)}
         for parent in parents:
             horizontal = parent.get("param") == "horz"
+            flow = parent.get("type-v2") == "layout-flow"
             run = []
             for child in list(parent) + [None]:
-                is_removed = (child is not None and child.tag == "zone"
-                              and child.get("name") in removed and child.get("type-v2") is None)
-                if is_removed:
+                if child is not None and is_sheet_zone(child, removed):
                     run.append(child)
-                    continue
+                    if flow:
+                        continue
                 if not run:
                     continue
                 first = run[0]
                 attrs = {k: first.get(k) for k in ("x", "y", "w", "h")}
-                if parent.get("type-v2") == "layout-flow":
+                if first.get("is-floating"):
+                    attrs["is-floating"] = first.get("is-floating")
+                fixed_px = None
+                if flow:
+                    # One fixed blank as large as the run was in the saved layout.
+                    # A flexible blank would not take the same share of the leftover
+                    # space as a sheet does, so the kept sheets would move
                     axis = "w" if horizontal else "h"
                     attrs[axis] = str(sum(int(z.get(axis)) for z in run))
-                    span_px = width_px if horizontal else height_px
-                    blank = {"id": str(next_id), "type-v2": "empty", **attrs}
-                    if span_px:
-                        blank["fixed-size"] = str(round(int(attrs[axis]) / ZONE_UNIT * span_px))
-                        blank["is-fixed"] = "true"
-                    el = etree.Element("zone", blank)
-                    el.tail = first.tail
-                    parent.insert(parent.index(first), el)
-                    for z in run:
-                        parent.remove(z)
-                    report.append({"dashboard": dash.get("name"), "replaces": [z.get("name") for z in run],
-                                   "zone": el.get("id"), "fixed_px": el.get("fixed-size"),
-                                   "direction": "horz" if horizontal else "vert"})
-                    next_id += 1
-                else:
-                    # Floating or tiled-basic zones: one blank per sheet, same box
-                    for z in run:
-                        el = etree.Element("zone", {"id": str(next_id), "type-v2": "empty",
-                                                    **{k: z.get(k) for k in ("x", "y", "w", "h")}})
-                        for k in ("is-floating",):
-                            if z.get(k):
-                                el.set(k, z.get(k))
-                        el.tail = z.tail
-                        parent.replace(z, el)
-                        report.append({"dashboard": dash.get("name"), "replaces": [z.get("name")],
-                                       "zone": el.get("id"), "fixed_px": None, "direction": None})
-                        next_id += 1
+                    span = layout_px(first)[0 if horizontal else 1]
+                    if span:
+                        fixed_px = round(int(attrs[axis]) / ZONE_UNIT * span)
+                    else:
+                        warnings.append(f"blank zone for {[z.get('name') for z in run]}: layout size is not "
+                                        "fixed, so the blank is not fixed either and may change size")
+                el = etree.Element("zone", {"id": str(next_id), "type-v2": "empty", **attrs})
+                if fixed_px is not None:
+                    el.set("fixed-size", str(fixed_px))
+                    el.set("is-fixed", "true")
+                el.tail = first.tail
+                parent.insert(parent.index(first), el)
+                for z in run:
+                    parent.remove(z)
+                device = next((a.get("name") for a in el.iterancestors("devicelayout")), None)
+                report.append({"dashboard": dash.get("name"), "device_layout": device,
+                               "replaces": [z.get("name") for z in run], "zone": el.get("id"),
+                               "fixed_px": fixed_px, "direction": ("horz" if horizontal else "vert") if flow else None,
+                               "had_flexible_sheet": any(z.get("is-fixed") != "true" for z in run)})
+                next_id += 1
                 run = []
     return report, warnings
 
 
-def leftovers(xml_text, removed_sheets, removed_calcs):
+# ---------------------------------------------------------------- report
+
+def leftovers(root, calcs, removed_sheets, removed_calcs):
+    """References to removed sheets or calcs that are still in the starter."""
     left = {}
-    if removed_calcs:
-        for m in ref_pattern(removed_calcs).findall(xml_text):
+    remaining = Calcs(root)
+    gone = {}
+    for dsn, n in removed_calcs:
+        if n not in remaining.names.get(dsn, set()):
+            gone.setdefault(dsn, set()).add(n)
+    for dsn, names in gone.items():
+        alt = "|".join(re.escape(n) for n in names)
+        pat = re.compile(r"\[" + re.escape(dsn) + r"\]\.\[(?:[^\]:]*:)?(" + alt + r")[\]:]")
+        for m in pat.findall(text_of(root)):
             left[m] = left.get(m, 0) + 1
-    for s in removed_sheets:
-        n = xml_text.count(f"'{s}'") + xml_text.count(f'"{s}"')
-        if n:
-            left[s] = n
+        bare = re.compile(r"[\[:](" + alt + r")[\]:]")
+        for dd in root.iter("datasource-dependencies"):
+            if dd.get("datasource") == dsn:
+                for m in bare.findall(text_of(dd)):
+                    left[m] = left.get(m, 0) + 1
+        if dsn in remaining.ds:
+            for m in bare.findall(text_of(remaining.ds[dsn])):
+                left[m] = left.get(m, 0) + 1
+    for el in root.iter():
+        if not isinstance(el.tag, str):
+            continue
+        for k, v in el.attrib.items():
+            if k not in LABEL_ATTRS and any(i in removed_sheets for i in names_in(v)):
+                left[v] = left.get(v, 0) + 1
+        for s in removed_sheets:
+            if el.text and (f'"{s}"' in el.text or f"'{s}'" in el.text):
+                left[s] = left.get(s, 0) + 1
     return left
 
 
 def main():
     a = parse_args()
     src = Path(a.twbx)
-    data, twb_name, _ = load(src)
+    data, twb_name = load(src)
     root = etree.fromstring(data, etree.XMLParser(remove_blank_text=False, huge_tree=True))
 
     sheets = [ws.get("name") for ws in root.findall("./worksheets/worksheet")]
@@ -261,50 +375,62 @@ def main():
     kept = set(asked) if a.keep else set(sheets) - set(asked)
     removed = set(sheets) - kept
 
-    calcs = collect_calcs(root)
-    used = used_calcs(root, calcs, kept, removed)
-    removed_calcs = {n for n in calcs if n not in used}
-
-    def caption(n):
-        return calcs[n][1].get("caption") or n
-
+    # Sheets, actions and dashboard zones go first, so the calcs that only they
+    # needed are no longer reachable
+    calcs = Calcs(root)
+    all_calcs = set(calcs.cols)
+    blanks, warnings = blank_zones(root, removed, kept)
+    dropped_actions, edited_actions = fix_actions(root, removed)
+    remove_sheets(root, removed)
+    used = used_calcs(root, calcs)
+    removed_calcs = all_calcs - used
     plan = {
         "source": src.name,
         "kept_sheets": [s for s in sheets if s in kept],
         "removed_sheets": [s for s in sheets if s in removed],
-        "kept_calcs": sorted(caption(n) for n in used),
-        "removed_calcs": sorted(caption(n) for n in removed_calcs),
+        "kept_calcs": sorted(calcs.caption(k) for k in used),
+        "removed_calcs": sorted(calcs.caption(k) for k in removed_calcs),
+        "blank_zones": blanks,
+        "removed_actions": dropped_actions,
+        "edited_actions": edited_actions,
     }
+    if len(calcs.ds) > 1:
+        plan["removed_calcs_by_datasource"] = {
+            dsn: sorted(calcs.caption(k) for k in removed_calcs if k[0] == dsn) for dsn in calcs.ds}
+    remove_calcs(calcs, removed_calcs)
 
-    removed_actions = remove_sheets(root, removed)
-    remove_calcs(root, calcs, removed_calcs)
-    blanks, warnings = blank_zones(root, removed, kept)
-    # The starter is a new workbook: drop every link to a published copy (workbook,
-    # worksheet and dashboard level). They name the Cloud site and would leak into
-    # the public starter.
-    plan["removed_repository_locations"] = 0
-    for rl in list(root.iter("repository-location")):
-        rl.getparent().remove(rl)
-        plan["removed_repository_locations"] += 1
+    # The starter is a new workbook: drop every link to a published copy. They
+    # name the Cloud site and would leak into the public starter.
+    rl = list(root.iter("repository-location"))
+    for el in rl:
+        el.getparent().remove(el)
+    plan["removed_repository_locations"] = len(rl)
+    plan["warnings"] = warnings
+    plan["leftover_references"] = leftovers(root, calcs, removed, removed_calcs)
 
     out_xml = etree.tostring(root, xml_declaration=True, encoding="utf-8")
-    plan.update({"blank_zones": blanks, "removed_actions": removed_actions, "warnings": warnings,
-                 "leftover_references": leftovers(out_xml.decode("utf-8"), removed, removed_calcs)})
-
     if not a.dry_run:
         out = Path(a.out)
         out.parent.mkdir(parents=True, exist_ok=True)
         twb_path = out.with_suffix(".twb")
-        twb_path.write_bytes(out_xml)
+        # Re-running on the starter's own .twb (after a manual fix) must not clobber the input first
+        if twb_path.resolve() != src.resolve():
+            twb_path.write_bytes(out_xml)
         member = out.stem + ".twb"
+        extras = []
+        if src.suffix.lower() == ".twbx":
+            with zipfile.ZipFile(src) as z:
+                extras = [(i, z.read(i.filename)) for i in z.infolist()
+                          if i.filename != twb_name and not i.is_dir()]
+        elif out.exists():
+            with zipfile.ZipFile(out) as z:  # keep the data of an earlier build
+                extras = [(i, z.read(i.filename)) for i in z.infolist()
+                          if not i.filename.lower().endswith(".twb") and not i.is_dir()]
         with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as dst:
             dst.writestr(member, out_xml)
-            if src.suffix.lower() == ".twbx":
-                with zipfile.ZipFile(src) as z:
-                    for info in z.infolist():
-                        if info.filename != twb_name and not info.is_dir():
-                            dst.writestr(info, z.read(info.filename))
-        plan["output"] = {"twbx": str(out), "twb": str(twb_path)}
+            for info, body in extras:
+                dst.writestr(info, body)
+        plan["output"] = {"twbx": out.as_posix(), "twb": twb_path.as_posix()}
 
     print(json.dumps(plan, ensure_ascii=False, indent=2))
     if plan["leftover_references"] or warnings:
