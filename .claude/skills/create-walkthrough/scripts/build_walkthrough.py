@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""Turn the editable guide source into the single-file build guide, then check it is safe to publish.
+"""Turn the editable walkthrough source into a single-file page, then check it is safe to publish.
 
 1. Every "embed:<path>" (path relative to the theme folder) in the source becomes a base64 data URI,
    wherever it appears: an img src, a JS string, CSS url().
 2. The output is scanned for things a public repository must not carry:
    absolute or personal paths, file:// URLs, e-mail addresses, Tableau Cloud URLs,
-   and the site / project / workbook identifiers found in refine/publish-result.json.
+   and the site / project / workbook identifiers found in every publish-result.json under the theme
+   folder (the finished workbook and the verification workbook). Workbook names that start with the
+   challenge week (YYYYWNN, e.g. 2026W47) are public titles and are not checked.
    Any hit fails the build (exit 1) and the output file is not written.
    Mentions of working folders (refine/, tmp/) are reported as warnings: readers cannot open them.
 
 Usage:
-  python build_guide.py --theme-dir outputs/2026-01-01-theme
-      [--src tmp/guide/build-guide.src.html] [--out guide/build-guide.html]
+  python build_walkthrough.py --theme-dir outputs/2026-01-01-theme --lang ja
+      [--src tmp/walkthrough/walkthrough-ja.src.html] [--out guide/walkthrough-ja.html]
 """
 
 import argparse
@@ -35,6 +37,8 @@ FORBIDDEN = [
     (re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+"), "e-mail address"),
     (re.compile(r"[\w.-]*online\.tableau\.com", re.IGNORECASE), "Tableau Cloud URL"),
 ]
+# Workbook names such as "2026W47" or "2026W47 Starter" are the challenge's public titles.
+PUBLIC_WORKBOOK_NAME = re.compile(r"^\d{4}W\d{2}\b")
 WORKING_FOLDERS = re.compile(r"\b(?:refine|tmp|prototype|Archived)/[^\s\"'<>]*")
 
 
@@ -46,20 +50,25 @@ def find_repo_root(start: Path) -> Path:
 
 
 def identifiers(theme: Path) -> list[tuple[str, str]]:
-    """Site, project and workbook names from publish-result.json: real names that must not leak."""
-    result = theme / "refine" / "publish-result.json"
-    if not result.exists():
-        return []
-    data = json.loads(result.read_text(encoding="utf-8"))
+    """Site, project and workbook names from every publish-result.json: real names that must not leak."""
     out = []
-    for key in ("projectName", "workbookId", "workbookName"):
-        if data.get(key):
-            out.append((str(data[key]), f"publish-result {key}"))
-    url = data.get("webpageUrl") or ""
-    m = re.search(r"/site/([^/]+)/", urlparse(url).fragment or url)
-    if m:
-        out.append((m.group(1), "Tableau Cloud site name"))
-    return out
+    for result in sorted(theme.rglob("publish-result*.json")):
+        try:
+            data = json.loads(result.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for key in ("projectName", "workbookId", "workbookName"):
+            value = data.get(key)
+            if not value:
+                continue
+            if key == "workbookName" and PUBLIC_WORKBOOK_NAME.match(str(value)):
+                continue
+            out.append((str(value), f"{result.name} {key}"))
+        url = data.get("webpageUrl") or ""
+        m = re.search(r"/site/([^/]+)/", urlparse(url).fragment or url)
+        if m:
+            out.append((m.group(1), "Tableau Cloud site name"))
+    return list(dict.fromkeys(out))
 
 
 def embed(html: str, theme: Path) -> tuple[str, list[str]]:
@@ -94,9 +103,12 @@ def scan(html: str, theme: Path) -> tuple[list[str], list[str]]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--theme-dir", required=True)
-    ap.add_argument("--src", default="tmp/guide/build-guide.src.html", help="relative to the theme folder")
-    ap.add_argument("--out", default="guide/build-guide.html", help="relative to the theme folder")
+    ap.add_argument("--lang", choices=("ja", "en"), required=True)
+    ap.add_argument("--src", help="relative to the theme folder (default: tmp/walkthrough/walkthrough-<lang>.src.html)")
+    ap.add_argument("--out", help="relative to the theme folder (default: guide/walkthrough-<lang>.html)")
     args = ap.parse_args()
+    args.src = args.src or f"tmp/walkthrough/walkthrough-{args.lang}.src.html"
+    args.out = args.out or f"guide/walkthrough-{args.lang}.html"
 
     theme = Path(args.theme_dir)
     if not theme.is_absolute():

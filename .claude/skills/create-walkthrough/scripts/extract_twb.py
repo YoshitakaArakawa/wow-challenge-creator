@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Extract what a build guide needs from a Tableau workbook (.twb or .twbx).
+"""Extract what a walkthrough needs from a finished Tableau workbook (.twb or .twbx).
 
 Reads the workbook XML and writes a JSON spec plus a compact Markdown summary:
 - data sources: connections, tables, relationship expressions, data files inside the .twbx
-- calculated fields: caption, readable formula, kind (row / agg / tc / tc-derived / lod), references
+- calculated fields: caption, readable formula, kind (row / agg / tc / tc-derived / lod), references,
+  the sheets that need it
 - parameters
 - worksheets: mark type, Rows/Columns pills, Marks-card encodings (in card order),
-  nested table-calc settings per pill (ordering-type and order fields), sorts, filters,
-  fixed axes, hidden headers, mark opacity, custom labels
+  nested table-calc settings per pill (ordering-type and the fields in order), sorts, filters,
+  fixed axes, hidden headers, mark opacity, custom labels,
+  the dimensions in the view, the component tree (pill -> calcs it references, recursively)
+  and the calcs the sheet needs, leaves first
+- data-source-wide filters (filters applied to all sheets that use the data source)
 - color assignments
 - dashboards: size and every zone with its share of the dashboard width/height
 
@@ -341,14 +345,21 @@ class Workbook:
                 for tc in tcs:
                     fld = tc.get("field")
                     calc_id = strip_brackets(fld.split("].[")[-1].strip("[]")) if fld else None
+                    if calc_id is None:
+                        m = INSTANCE_RE.search(inst.get("name", ""))
+                        calc_id = m.group("name") if m else None
+                    # Several fields are stored as <order> children; a single field as the ordering-field attribute.
+                    order = [self.pill(o.get("field", ""))["field"] for o in tc.findall("order")]
+                    if not order and tc.get("ordering-field"):
+                        order = [self.pill(tc.get("ordering-field"))["field"]]
                     nested.append({
                         "calc": self.caption(calc_id) if calc_id else pill["field"],
                         "kind": self.calcs[calc_id]["kind"] if calc_id in self.calcs else None,
                         "outer": fld is None,
                         "ordering_type": tc.get("ordering-type"),
                         "compute_using": ORDERING_LABEL.get(tc.get("ordering-type"), tc.get("ordering-type")),
-                        "order": [self.pill(o.get("field", ""))["field"] for o in tc.findall("order")],
-                        **{k: v for k, v in tc.attrib.items() if k not in ("field", "ordering-type")},
+                        "order": order,
+                        **{k: v for k, v in tc.attrib.items() if k not in ("field", "ordering-type", "ordering-field")},
                     })
                 info["table_calcs"].append({"pill": pill["label"], "nested": nested})
             for s in (view.findall("manual-sort") if view is not None else []):
@@ -371,7 +382,8 @@ class Workbook:
                 for enc in rule.findall("encoding"):
                     if enc.get("type") == "space" and enc.get("range-type") == "fixed":
                         info["axes"].append({"field": self.pill(enc.get("field", ""))["label"], "scope": enc.get("scope"),
-                                             "min": enc.get("min"), "max": enc.get("max")})
+                                             "min": enc.get("min"), "max": enc.get("max"),
+                                             "reversed": enc.get("reverse") == "true"})
                 for fmt in rule.findall("format"):
                     if fmt.get("attr") == "display" and fmt.get("value") == "false":
                         info["hidden_headers"].append({"element": rule.get("element"),
@@ -379,7 +391,70 @@ class Workbook:
                     elif fmt.get("attr") in ("line-visibility", "stroke-size"):
                         info["format"].append({"element": rule.get("element"), fmt.get("attr"): fmt.get("value")})
             self._collect_colors(table, ws.get("name"))
+            self._add_tree(info)
             out.append(info)
+        return out
+
+    # ----- per-sheet component tree -----
+    def _calc_node(self, calc_id: str, seen: frozenset) -> dict:
+        c = self.calcs[calc_id]
+        node = {"calc": c["caption"], "kind": c["kind"], "children": []}
+        if calc_id in seen:  # a cycle cannot happen in Tableau, but stay safe
+            return node
+        for r in c["refs"]:
+            node["children"].append(self._calc_node(r, seen | {calc_id}))
+        return node
+
+    def _add_tree(self, info: dict):
+        """Roots = every pill on Columns, Rows and the Marks card. Children = the calcs each one references."""
+        roots, dims = [], []
+        shelves = [("Columns", p) for p in info["cols"]] + [("Rows", p) for p in info["rows"]]
+        for pane in info["panes"]:
+            shelves += [(e["shelf"], e) for e in pane["encodings"]]
+        seen_roots = set()
+        for shelf, p in shelves:
+            m = INSTANCE_RE.search(p.get("raw", ""))
+            name = m.group("name") if m else None
+            key = (shelf, p.get("label"))
+            if key in seen_roots:
+                continue
+            seen_roots.add(key)
+            root = {"shelf": shelf, "label": p.get("label"), "continuous": p.get("continuous"),
+                    "table_calc": p.get("table_calc"), "children": []}
+            if name in self.calcs:
+                root.update(self._calc_node(name, frozenset()))
+                root["label"] = p.get("label")
+            roots.append(root)
+            if p.get("derivation") == "none" and p.get("field") not in dims:
+                dims.append(p.get("field"))
+        info["tree"] = roots
+        info["dimensions"] = dims
+        needed: list[str] = []
+
+        def post(n: dict):
+            for ch in n.get("children", []):
+                post(ch)
+            if n.get("calc") and n["calc"] not in needed:
+                needed.append(n["calc"])
+
+        for r in roots:
+            post(r)
+        info["calcs_needed"] = needed  # leaves first: the order a reader would create them
+
+    # ----- data-source-wide filters -----
+    def datasource_filters(self) -> list[dict]:
+        """Filters applied to every sheet that uses the data source (Apply to Worksheets > All Using This Data Source)."""
+        out = []
+        for sv in self.root.findall("./shared-views/shared-view"):
+            for f in sv.findall("filter"):
+                gf = f.find("groupfilter")
+                members = [g.get("member", "").strip('"') for g in f.iter("groupfilter") if g.get("function") == "member"]
+                out.append({
+                    "field": self.pill(f.get("column", ""))["field"],
+                    "class": f.get("class"),
+                    "all": gf is not None and gf.get("function") == "level-members",
+                    "saved_members": members,
+                })
         return out
 
     def _runs(self, node: ET.Element) -> str:
@@ -432,6 +507,8 @@ def build_spec(path: Path) -> dict:
     sheets = wb.worksheets()
     dashboards = wb.dashboards()
     calcs = list(wb.calcs.values())
+    for c in calcs:
+        c["sheets"] = [ws["name"] for ws in sheets if c["caption"] in ws["calcs_needed"]]
     return {
         "source": path.name,
         "counts": {
@@ -447,6 +524,7 @@ def build_spec(path: Path) -> dict:
         "parameters": wb.params,
         "calcs": calcs,
         "colors": wb.colors,
+        "datasource_filters": wb.datasource_filters(),
         "worksheets": sheets,
         "dashboards": dashboards,
     }
@@ -455,6 +533,23 @@ def build_spec(path: Path) -> dict:
 def pill_md(p: dict) -> str:
     kind = "連続" if p.get("continuous") else "不連続"
     return f"`{p['label']}`({kind}{', △' if p.get('table_calc') else ''})"
+
+
+def tree_md(node: dict, depth: int, shown: set, shelf: str | None = None) -> list[str]:
+    """One line per node. A calc whose subtree was already printed for this sheet is marked and not expanded."""
+    head = f"{shelf}: " if shelf else ""
+    tc = " △" if node.get("kind") in ("tc", "tc-derived") else ""
+    kind = f" [{node['kind']}]" if node.get("kind") else ""
+    calc = node.get("calc")
+    repeat = calc in shown and node.get("children")
+    out = [f"{'  ' * depth}- {head}{node.get('label') or calc}{tc}{kind}{' (上に既出)' if repeat else ''}"]
+    if repeat:
+        return out
+    if calc:
+        shown.add(calc)
+    for ch in node.get("children", []):
+        out += tree_md(ch, depth + 1, shown)
+    return out
 
 
 def to_markdown(spec: dict) -> str:
@@ -523,9 +618,20 @@ def to_markdown(spec: dict) -> str:
             group = f" 共有グループ {f['filter_group']}" if f.get("filter_group") else ""
             lines.append(f"- フィルター {f['field']} ({f['class']}){group}{saved}")
         for a in ws["axes"]:
-            lines.append(f"- 軸固定 {a['field']} ({a['scope']}): {a['min']}〜{a['max']}")
+            lines.append(f"- 軸固定 {a['field']} ({a['scope']}): {a['min']}〜{a['max']}{'、反転' if a.get('reversed') else ''}")
         if ws["hidden_headers"]:
             lines.append(f"- 非表示: {', '.join((h['field'] or h['element']) for h in ws['hidden_headers'])}")
+        lines.append(f"- ディメンション: {', '.join(ws['dimensions']) or '（なし）'}")
+        lines.append(f"- 要る計算（葉から）: {', '.join(ws['calcs_needed']) or '（なし）'}")
+        lines.append("- 部品の木:")
+        shown: set = set()
+        for r in ws["tree"]:
+            lines += tree_md(r, 1, shown, r["shelf"])
+    if spec["datasource_filters"]:
+        lines += ["", "## データソース全体のフィルター（このデータソースを使う全シートに効く）"]
+        for f in spec["datasource_filters"]:
+            state = "すべて" if f["all"] else ", ".join(f["saved_members"])
+            lines.append(f"- {f['field']} ({f['class']}): 保存時 {state}")
     groups = {}
     for ws in spec["worksheets"]:
         for f in ws["filters"]:
