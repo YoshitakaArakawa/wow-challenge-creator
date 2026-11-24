@@ -105,7 +105,7 @@ CANDIDATES = [
     "google-chrome", "chromium", "chromium-browser",
 ]
 # Taller than a long walkthrough at phone width; the shot is trimmed to the content afterwards.
-MAX_HEIGHT = 60000
+MAX_HEIGHT = 120000
 # Blank rows kept under the last content row.
 TRIM_MARGIN = 40
 # The iframe ends a little above the window bottom, so the crop below it holds only the page.

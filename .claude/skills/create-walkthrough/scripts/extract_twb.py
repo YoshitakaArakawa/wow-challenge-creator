@@ -13,6 +13,7 @@ Reads the workbook XML and writes a JSON spec plus a compact Markdown summary:
   the component tree (pill or sort -> calcs it references, recursively)
   and the calcs the sheet needs, leaves first
 - data-source-wide filters (filters applied to all sheets that use the data source)
+- elements listed but not interpreted: reference lines, sets and groups, dashboard actions, extensions
 - color assignments
 - dashboards: size and every zone with its share of the dashboard width/height
 
@@ -391,7 +392,7 @@ class Workbook:
             for f in (view.findall("filter") if view is not None else []):
                 members = [g.get("member", "").strip('"') for g in f.iter("groupfilter") if g.get("function") == "member"]
                 info["filters"].append({
-                    "field": self.pill(f.get("column", ""))["field"], "class": f.get("class"),
+                    "field": self.pill(f.get("column", ""))["field"], "class": f.get("class"), "raw": f.get("column", ""),
                     "filter_group": f.get("filter-group"),
                     "saved_members": members, "min": f.findtext("min"), "max": f.findtext("max"),
                 })
@@ -444,6 +445,20 @@ class Workbook:
             roots.append(root)
             if p.get("derivation") == "none" and p.get("field") not in dims:
                 dims.append(p.get("field"))
+        for flt in info["filters"]:
+            m = INSTANCE_RE.search(flt.get("raw") or "")
+            if m and m.group("name") in self.calcs:
+                root = {"shelf": "Filter", "label": flt["field"], "children": []}
+                root.update(self._calc_node(m.group("name"), frozenset()))
+                roots.append(root)
+            elif (flt.get("raw") or "").endswith(":Measure Names]"):
+                for member in flt["saved_members"]:
+                    mm = INSTANCE_RE.search(member)
+                    if mm and mm.group("name") in self.calcs:
+                        root = {"shelf": "Measure Values", "label": self.pill(member)["label"], "children": []}
+                        root.update(self._calc_node(mm.group("name"), frozenset()))
+                        root["label"] = self.pill(member)["label"]
+                        roots.append(root)
         for srt in info["sorts"]:
             m = INSTANCE_RE.search(srt.get("using_raw") or "")
             if m and m.group("name") in self.calcs:
@@ -464,6 +479,32 @@ class Workbook:
         for r in roots:
             post(r)
         info["calcs_needed"] = needed  # leaves first: the order a reader would create them
+
+    # ----- elements listed but not interpreted -----
+    def other_elements(self) -> list[dict]:
+        """Things a reader must build that this script does not model: reference lines, sets and
+        groups, dashboard actions, extensions. Listed so that no part of the workbook goes unseen."""
+        out = []
+        for ws in self.root.findall("./worksheets/worksheet"):
+            for rl in ws.iter("reference-line"):
+                out.append({"kind": "reference line", "where": ws.get("name"),
+                            "detail": f"axis {self.pill(rl.get('axis-column', ''))['label']}, "
+                                      f"{rl.get('formula')} of {self.pill(rl.get('value-column', ''))['label'] if rl.get('value-column') else '(axis)'}, "
+                                      f"scope {rl.get('scope')}"})
+            for el in ws.iter():
+                if el.tag.endswith("add-in") and el.get("add-in-id"):
+                    out.append({"kind": "viz extension", "where": ws.get("name"), "detail": el.get("add-in-id")})
+        for ds in self.root.findall("./datasources/datasource"):
+            for g in ds.findall("group"):
+                if g.get("user:auto-column") == "sheet_link" or g.get("{http://www.tableausoftware.com/xml/user}auto-column") == "sheet_link":
+                    continue  # created automatically by a filter action
+                out.append({"kind": "set / group", "where": ds.get("caption") or ds.get("name"),
+                            "detail": g.get("caption") or strip_brackets(g.get("name", ""))})
+        for act in self.root.findall("./actions/*"):
+            src = act.find("source")
+            out.append({"kind": f"action ({act.tag})", "where": (src.get("worksheet") or src.get("dashboard")) if src is not None else None,
+                        "detail": act.get("caption")})
+        return out
 
     # ----- data-source-wide filters -----
     def datasource_filters(self) -> list[dict]:
@@ -549,6 +590,7 @@ def build_spec(path: Path) -> dict:
         "calcs": calcs,
         "colors": wb.colors,
         "datasource_filters": wb.datasource_filters(),
+        "other_elements": wb.other_elements(),
         "worksheets": sheets,
         "dashboards": dashboards,
     }
@@ -655,6 +697,10 @@ def to_markdown(spec: dict) -> str:
         shown: set = set()
         for r in ws["tree"]:
             lines += tree_md(r, 1, shown, r["shelf"])
+    if spec["other_elements"]:
+        lines += ["", "## 抽出していない要素（TWB を直接見て、どの章で作るかを決める）"]
+        for e in spec["other_elements"]:
+            lines.append(f"- {e['kind']}（{e['where']}）: {e['detail']}")
     if spec["datasource_filters"]:
         lines += ["", "## データソース全体のフィルター（このデータソースを使う全シートに効く）"]
         for f in spec["datasource_filters"]:
