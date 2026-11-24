@@ -55,7 +55,7 @@ python .claude/skills/publish-to-cloud/scripts/tableau_auth.py login
 5. **要件の確定** (`create-requirements`) - 完成した表示に合わせて、英語+日本語の要件文を仕上げる
 6. **X 投稿文の作成** (`create-x-post`) - Cloud URL を含めた告知文
 
-任意・分岐: `analyze-twbx`（既存Viz・Cloud上WB解析）、`search-tableau-features`（新機能検索）、`publish-to-cloud` の単独実行（手動で作った .twbx の公開）。詳細は [CLAUDE.md](CLAUDE.md) のパイプライン節を参照。
+任意・分岐: `analyze-twbx`（既存Viz・Cloud上WB解析）、`search-tableau-features`（新機能検索）、`publish-to-cloud` の単独実行（手動で作った .twbx の公開）、`create-starter`（完成版から初心者向けのスターター .twbx を生成）。詳細は [CLAUDE.md](CLAUDE.md) のパイプライン節を参照。
 
 ## プロジェクト構成
 
@@ -66,6 +66,7 @@ python .claude/skills/publish-to-cloud/scripts/tableau_auth.py login
   create-requirements/ # 要件文 + プロトタイプHTML
   create-workbook/     # .twbx 生成 (テンプレ差分 + TWB 直接編集)
   publish-to-cloud/    # Tableau Cloud パブリッシュ
+  create-starter/      # 完成版から初心者向けのスターター .twbx を生成
   create-x-post/       # X (Twitter) 投稿文
   search-tableau-features/    # Tableau Desktop 機能検索（キャッシュ付き）
 common/                # 共通アセット (テンプレートTWBX、サンプルデータ。gitignore対象で、手元に配置する)

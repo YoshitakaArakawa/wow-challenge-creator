@@ -77,4 +77,5 @@ create-x-post
 | 既存Vizを参考にしたい (.twbx / Tableau Public) | `analyze-twbx`（要件ドラフトの前後） |
 | 最新機能を確認したい | `search-tableau-features`（ブレスト中） |
 | ユーザーが手動で .twbx を作った | `create-workbook` を飛ばし、`refine/` に置いて `publish-to-cloud` |
+| 初心者向けに定番部分まで組んだスターターを配る | `create-starter`（完成版ができた後、要件の確定の前） |
 | 公開後にユーザーが Cloud 上で微修正した | `analyze-twbx`（Cloud経路）で pull → 差分を把握 → `create-workbook` で反映、または `publish-to-cloud --overwrite` |
