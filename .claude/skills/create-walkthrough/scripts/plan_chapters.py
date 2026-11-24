@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """Draft the chapter table of a walkthrough from the spec that extract_twb.py wrote.
 
-One chapter = one sheet to build. A calc is created in the first chapter that needs it and
-reused afterwards. For every chapter the table lists the calcs to create, the calcs reused from
-earlier chapters (only those the sheet's pills or the new calcs reference directly), the dimensions in the view and the table calcs that appear in its
-Edit Table Calculation dialog (nested calcs computed along specific dimensions).
+One row per sheet, in chapter order. A calc is created in the first sheet that needs it and
+reused afterwards. Each row lists the calcs to create, the calcs reused from earlier rows (only
+those the sheet's pills or the new calcs reference directly), the dimensions in the view and the
+table calcs set in its Edit Table Calculation dialog (nested calcs along specific dimensions).
 
-Without --order the sheets are ordered greedily: the sheet that needs the fewest new calcs comes
-next, ties broken by the sheet's position on the dashboard (top to bottom, left to right).
-With --order the given order is used as is; sheets left out are appended in greedy order.
---given lists sheets the reader receives ready-made (a starter): their calcs count as built
-and they get no chapter.
+--order gives the order (decided by Claude, approved by the user). Without it, and for sheets it
+leaves out, the dashboard order (top to bottom, left to right) is used.
+--given lists sheets the reader receives ready-made (a starter): their calcs count as built and
+they get no row.
 
 Usage:
   python plan_chapters.py twb-spec.json [--order "Sheet A,Sheet B"] [--given "Sheet C"] [--md out.md]
@@ -53,8 +52,7 @@ def plan(spec: dict, order: list[str], given: list[str]) -> list[dict]:
     built: set[str] = set()
     for s in given:
         built |= set(sheets[s]["calcs_needed"])
-    remaining = [s for s in sheets if s not in given and s not in order]
-    sequence = list(order)
+    rest = sorted((s for s in sheets if s not in given and s not in order), key=lambda s: rank.get(s, (999, 999)))
     chapters = []
 
     def take(name: str):
@@ -69,12 +67,8 @@ def plan(spec: dict, order: list[str], given: list[str]) -> list[dict]:
                          "dialog": dialog_calcs(ws), "on_dashboard": name in rank})
         built.update(new)
 
-    for name in sequence:
+    for name in list(order) + rest:
         take(name)
-    while remaining:
-        remaining.sort(key=lambda s: (len([c for c in sheets[s]["calcs_needed"] if c not in built]),
-                                      rank.get(s, (999, 999))))
-        take(remaining.pop(0))
     return chapters
 
 

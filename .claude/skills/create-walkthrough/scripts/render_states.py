@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
-"""Render one published view under several filter states, for walkthrough figures and check values.
+"""Render one published view under several filter states. Optional: use it only when a figure
+needs a filtered state; unfiltered views come from publish.py --render.
 
-Reuses the publish-to-cloud sign-in (.env + cached OAuth session, or PAT) and the
-workbook id that publish-to-cloud wrote to publish-result.json: the finished workbook's
-(refine/publish-result.json, the default) or the verification workbook's (--publish-result).
+Reuses the publish-to-cloud sign-in (.env + cached OAuth session, or PAT) and the workbook id in a
+publish-result.json: the finished workbook's (refine/publish-result.json, the default) or the
+verification workbook's (--publish-result).
 
 Each --state is "label" or "label|Field=Value[,Value...]|Field=Value...".
-A state without filters renders the view as saved in the workbook.
+A state without filters renders the view as saved, which may already be filtered: to show every
+value of a filter, list them all ("Region=Central,East,South,West").
 
 Usage:
-  python render_states.py --theme-dir outputs/2026-01-01-theme --view Dashboard \
-      --state "all" --state "sds|Ship Mode=Same Day|Region=South"
-  python render_states.py --theme-dir outputs/2026-01-01-theme --view "Link 0-1"       --publish-result tmp/walkthrough/sheets/refine/publish-result.json       --out-dir tmp/walkthrough/figs --prefix sheet-link01- --state "all" --state "sds|Ship Mode=Same Day|Region=South"
-Output: <out-dir>/<prefix><label>.png (default <theme>/refine/render/guide/<label>.png),
-plus <prefix>states.json listing label, filters and file.
+  python render_states.py --theme-dir outputs/2026-01-01-theme --view "Sheet name" \
+      [--publish-result tmp/walkthrough/sheets/refine/publish-result.json] \
+      [--out-dir tmp/walkthrough/figs] [--prefix sheet-] --state "east|Region=East"
+Output: <out-dir>/<prefix><label>.png, plus <prefix>states.json listing label, filters and file.
 """
 
 import argparse
@@ -59,7 +60,7 @@ def main() -> int:
     ap.add_argument("--state", action="append", required=True, help='"label" or "label|Field=V1,V2|Field2=V"')
     ap.add_argument("--workbook-id", help="defaults to workbookId in the publish result")
     ap.add_argument("--publish-result", default="refine/publish-result.json", help="relative to the theme folder")
-    ap.add_argument("--out-dir", default="refine/render/guide", help="relative to the theme folder")
+    ap.add_argument("--out-dir", default="tmp/walkthrough/figs", help="relative to the theme folder")
     ap.add_argument("--prefix", default="", help="prepended to every output file name")
     args = ap.parse_args()
 

@@ -164,7 +164,9 @@ class Workbook:
     def pill(self, instance: str) -> dict:
         m = INSTANCE_RE.search(instance)
         if not m:
-            return {"label": instance, "raw": instance}
+            # Instances outside the derivation:name:type form, e.g. [ds].[:Measure Names].
+            name = instance.rsplit("].[", 1)[-1].strip("[]").lstrip(":")
+            return {"label": name, "field": self.caption(name), "raw": instance}
         name, deriv = m.group("name"), m.group("deriv")
         cap = self.caption(name)
         agg = DERIVATION_LABEL.get(deriv, deriv.upper())
@@ -191,6 +193,10 @@ class Workbook:
             for col in ds.findall("column"):
                 if col.get("caption"):
                     self.captions[strip_brackets(col.get("name", ""))] = col.get("caption")
+        # Ad-hoc calcs typed on a shelf (e.g. INDEX()) are defined only inside the worksheet.
+        for col in self.root.iter("column"):
+            if col.get("caption"):
+                self.captions.setdefault(strip_brackets(col.get("name", "")), col.get("caption"))
         for ds in ds_nodes:
             if ds.get("name") == "Parameters":
                 for col in ds.findall("column"):
@@ -362,7 +368,8 @@ class Workbook:
                     if not order and tc.get("ordering-field"):
                         order = [self.pill(tc.get("ordering-field"))["field"]]
                     nested.append({
-                        "calc": self.caption(calc_id) if calc_id else pill["field"],
+                        # A quick table calc on a pill has an internal id but no calc of its own: show the pill.
+                        "calc": self.caption(calc_id) if calc_id in self.calcs or calc_id in self.captions else pill["label"],
                         "kind": self.calcs[calc_id]["kind"] if calc_id in self.calcs else None,
                         "outer": fld is None,
                         "ordering_type": tc.get("ordering-type"),
