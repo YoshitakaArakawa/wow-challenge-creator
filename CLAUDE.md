@@ -62,8 +62,8 @@ create-requirements（ドラフト）
 create-workbook
   ↓ refine ループ: TWB 編集 → publish-to-cloud で Cloud に上書き・描画 → 比較
   ↓ ループ最終回の publish がそのまま公開版
-create-build-guide（任意。要件の確定の前後どちらでもよい）
-  ↓ guide/build-guide.html に作り方の図解（参加者へのヒント）
+create-walkthrough（任意。要件の確定の前後どちらでもよい）
+  ↓ guide/walkthrough-{ja,en}.html に 1 シートずつ作る手順書（参加者へのヒント）
 create-requirements（確定）
   ↓ 完成した表示に合わせて、参加者向けの要件と Introduction を仕上げる
 create-x-post
@@ -80,5 +80,5 @@ create-x-post
 | 最新機能を確認したい | `search-tableau-features`（ブレスト中） |
 | ユーザーが手動で .twbx を作った | `create-workbook` を飛ばし、`refine/` に置いて `publish-to-cloud` |
 | 初心者向けに定番部分まで組んだスターターを配る | `create-starter`（完成版ができた後、要件の確定の前） |
-| 作り方のヒントを参加者に出したい | `create-build-guide`（ワークブック完成後） |
+| 作り方のヒントを参加者に出したい | `create-walkthrough`（ワークブック完成後） |
 | 公開後にユーザーが Cloud 上で微修正した | `analyze-twbx`（Cloud経路）で pull → 差分を把握 → `create-workbook` で反映、または `publish-to-cloud --overwrite` |

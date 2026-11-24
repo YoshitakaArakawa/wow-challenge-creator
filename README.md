@@ -9,7 +9,7 @@
 3. **ワークブック解析** - .twbx から構造、計算フィールド、LOD式、依存関係を抽出。Tableau Public スクリーンショット取得、Tableau Cloud 上のワークブック取得にも対応
 4. **ワークブック生成** - 要件とテンプレートから .twbx を生成。計算フィールドをパッチで投入し、シートとダッシュボードは TWB を直接編集する。表示は Tableau Cloud の描画で確認する（Sankey 等の特殊チャートは対象外）
 5. **Tableau Cloud パブリッシュ** - OAuth ブラウザサインイン（PAT も可）、上書き対応、上書き時バックアップ、全ビューの PNG 描画取得
-6. **作り方の解説** - 完成したワークブックから、計算フィールド・シート・表計算の設定を図解した HTML を作成
+6. **手順書** - 完成したワークブックから、参加者が 1 シートずつ作り進める手順書（日本語・英語）を作成し、GitHub Pages で公開
 7. **X 投稿文の作成** - 出題公開時の告知文を作成
 8. **Tableau 機能検索** - Tableau Desktop の最新機能を検索
 
@@ -53,7 +53,7 @@ python .claude/skills/publish-to-cloud/scripts/tableau_auth.py login
 2. **ブレスト** (`brainstorm`) - 直近の出題との重複チェック、ヒアリング、アイデア展開
 3. **要件ドラフト** (`create-requirements`) - 作業用の要件と、任意で HTML プロトタイプ
 4. **ワークブック生成** (`create-workbook`) - テンプレに計算フィールドを投入し、TWB を直接編集して .twbx を生成。表示の調整は Tableau Cloud へのパブリッシュ (`publish-to-cloud`) と描画の確認を繰り返して行う
-5. **作り方の解説** (`create-build-guide`、任意) - 完成した TWB と Cloud の描画から、計算フィールド・シート・表計算の設定を図解した 1 ファイルの HTML
+5. **手順書** (`create-walkthrough`、任意) - 完成した TWB から章立て（作るシート 1 枚 = 1 章）を設計し、シート単体の Cloud 描画と照合した確認の値を埋め込んだ日本語・英語の HTML
 6. **要件の確定** (`create-requirements`) - 完成した表示に合わせて、英語+日本語の要件文を仕上げる
 7. **X 投稿文の作成** (`create-x-post`) - Cloud URL を含めた告知文
 
@@ -69,11 +69,11 @@ python .claude/skills/publish-to-cloud/scripts/tableau_auth.py login
   create-workbook/     # .twbx 生成 (テンプレ差分 + TWB 直接編集)
   publish-to-cloud/    # Tableau Cloud パブリッシュ
   create-starter/      # 完成版から初心者向けのスターター .twbx を生成
-  create-build-guide/  # 作り方の解説 HTML (TWB 抽出 + Cloud 描画)
+  create-walkthrough/  # 手順書 HTML (TWB 抽出 + 章立て + Cloud 描画)
   create-x-post/       # X (Twitter) 投稿文
   search-tableau-features/    # Tableau Desktop 機能検索（キャッシュ付き）
 common/                # 共通アセット (テンプレートTWBX、サンプルデータ。gitignore対象で、手元に配置する)
-outputs/               # 出題フォルダ（許可リスト型: Markdown・x-post.txt・guide/build-guide.html・public/ だけを追跡）
+outputs/               # 出題フォルダ（許可リスト型: Markdown・x-post.txt・guide/*.html・public/ だけを追跡）
 examples/              # 出題例（WOW2026 W12: https://www.workout-wednesday.com/2026w12tab/）
 ```
 
