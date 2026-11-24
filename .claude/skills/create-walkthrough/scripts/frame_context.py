@@ -36,6 +36,10 @@ PAD_SHARE = 0.07
 COLOR_TOLERANCE = 40
 # A marker needs at least this many pixels; fewer means the colour was not drawn.
 MIN_MARK_PIXELS = 20
+# Crop edges move outward to the nearest blank row, at most this share of the height, so text is not cut.
+SNAP_SHARE = 0.06
+# A row counts as blank when every pixel is at least this light on each channel.
+BLANK_MIN = 245
 
 
 def safe_name(name: str) -> str:
@@ -65,6 +69,22 @@ def find_boxes(marked: Image.Image, colors: dict[str, tuple]) -> dict[str, tuple
     return {k: tuple(v) for k, v in boxes.items() if counts[k] >= MIN_MARK_PIXELS}
 
 
+def blank_row(px, w: int, y: int) -> bool:
+    return all(min(px[x, y]) >= BLANK_MIN for x in range(0, w, 2))
+
+
+def snap(px, w: int, h: int, y: int, step: int) -> int:
+    """Move y by step (-1 up, +1 down) until a blank row, within SNAP_SHARE of the height."""
+    limit = round(SNAP_SHARE * h)
+    for i in range(limit + 1):
+        yy = y + step * i
+        if yy < 0 or yy >= h:
+            return max(0, min(h, yy))
+        if blank_row(px, w, yy):
+            return yy
+    return y
+
+
 def frame(img: Image.Image, box: tuple) -> Image.Image:
     w, h = img.size
     x0, y0, x1, y1 = box
@@ -73,8 +93,11 @@ def frame(img: Image.Image, box: tuple) -> Image.Image:
     ImageDraw.Draw(out).rectangle([x0 - lw / 2, y0 - lw / 2, x1 + lw / 2, y1 + lw / 2], outline=FRAME_COLOR, width=lw)
     band = max((y1 - y0) + 2 * PAD_SHARE * h, MIN_CROP_SHARE * h)
     mid = (y0 + y1) / 2
-    top = max(0, min(h - band, mid - band / 2))
-    return out.crop((0, round(top), w, round(min(h, top + band))))
+    top = round(max(0, min(h - band, mid - band / 2)))
+    bottom = round(min(h, top + band))
+    px = img.convert("RGB").load()
+    top, bottom = snap(px, w, h, top, -1), snap(px, w, h, min(bottom, h - 1), +1)
+    return out.crop((0, top, w, min(h, bottom + 1)))
 
 
 def main() -> int:

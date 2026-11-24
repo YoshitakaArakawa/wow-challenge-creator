@@ -9,7 +9,8 @@ Reads the workbook XML and writes a JSON spec plus a compact Markdown summary:
 - worksheets: mark type, Rows/Columns pills, Marks-card encodings (in card order),
   nested table-calc settings per pill (ordering-type and the fields in order), sorts, filters,
   fixed axes, hidden headers, mark opacity, custom labels,
-  the dimensions in the view, the component tree (pill -> calcs it references, recursively)
+  pane formats (mark colour, borders, label colour), the dimensions in the view,
+  the component tree (pill or sort -> calcs it references, recursively)
   and the calcs the sheet needs, leaves first
 - data-source-wide filters (filters applied to all sheets that use the data source)
 - color assignments
@@ -59,6 +60,8 @@ ORDERING_LABEL = {
     "Table": "表（横、下）",
     "Cell": "セル",
 }
+# Pane formats that a reader does not need to set by hand.
+PANE_STYLE_SKIP = {"mark-labels-show", "mark-labels-cull", "aspect", "size", "mark-labels-mode"}
 ENCODING_SHELF = {
     "color": "Color", "size": "Size", "text": "Label", "lod": "Detail", "tooltip": "Tooltip",
     "path": "Path", "shape": "Shape", "wedge-size": "Angle", "geometry": "Geometry",
@@ -211,6 +214,7 @@ class Workbook:
                     "caption": col.get("caption") or name,
                     "datatype": col.get("datatype"),
                     "role": col.get("role"),
+                    "default_format": col.get("default-format"),
                     "formula_raw": calc.get("formula"),
                     "own": sorted(own_function_kinds(calc.get("formula"))),
                     "refs": [r for r in dict.fromkeys(FIELD_REF_RE.findall(calc.get("formula")))],
@@ -328,9 +332,14 @@ class Workbook:
                     if enc.tag == "text" and p["mark"] == "Text":
                         shelf = "Text"
                     p["encodings"].append({"shelf": shelf, **self.pill(enc.get("column", ""))})
-                for fmt in pane.findall("./style/style-rule/format"):
-                    if fmt.get("attr") == "mark-transparency":
-                        p["opacity_pct"] = round(int(fmt.get("value")) / ALPHA_MAX * 100)
+                p["style"] = {}
+                for rule in pane.findall("./style/style-rule"):
+                    for fmt in rule.findall("format"):
+                        attr = fmt.get("attr")
+                        if attr == "mark-transparency":
+                            p["opacity_pct"] = round(int(fmt.get("value")) / ALPHA_MAX * 100)
+                        elif attr not in PANE_STYLE_SKIP:
+                            p["style"][f"{rule.get('element')}.{attr}"] = fmt.get("value")
                 label = pane.find("customized-label")
                 if label is not None:
                     p["custom_label"] = self._runs(label)
@@ -367,7 +376,8 @@ class Workbook:
                                       "order": [(b.text or "").strip('"') for b in s.iter("bucket")]})
             for s in (view.findall("computed-sort") if view is not None else []):
                 info["sorts"].append({"kind": "computed", "field": self.pill(s.get("column", ""))["field"],
-                                      "direction": s.get("direction"), "using": self.pill(s.get("using", ""))["label"]})
+                                      "direction": s.get("direction"), "using": self.pill(s.get("using", ""))["label"],
+                                      "using_raw": s.get("using", "")})
             for s in (view.findall("natural-sort") if view is not None else []):
                 info["sorts"].append({"kind": "natural", "field": self.pill(s.get("column", ""))["field"],
                                       "direction": s.get("direction")})
@@ -427,6 +437,13 @@ class Workbook:
             roots.append(root)
             if p.get("derivation") == "none" and p.get("field") not in dims:
                 dims.append(p.get("field"))
+        for srt in info["sorts"]:
+            m = INSTANCE_RE.search(srt.get("using_raw") or "")
+            if m and m.group("name") in self.calcs:
+                root = {"shelf": f"Sort {srt['field']}", "label": srt["using"], "children": []}
+                root.update(self._calc_node(m.group("name"), frozenset()))
+                root["label"] = srt["using"]
+                roots.append(root)
         info["tree"] = roots
         info["dimensions"] = dims
         needed: list[str] = []
@@ -578,6 +595,8 @@ def to_markdown(spec: dict) -> str:
         lines.append("```")
         lines.append(calc["formula"])
         lines.append("```")
+        if calc.get("default_format"):
+            lines.append(f"既定の数値書式: `{calc['default_format']}`")
         if calc["ref_captions"]:
             lines.append(f"参照: {', '.join(calc['ref_captions'])}")
         if calc["used_by"]:
@@ -601,6 +620,8 @@ def to_markdown(spec: dict) -> str:
                 lines.append(f"  - {e['shelf']}: {pill_md(e)}")
             if pane.get("custom_label"):
                 lines.append(f"  - ラベルの編集: {pane['custom_label']!r}")
+            if pane.get("style"):
+                lines.append("  - 書式: " + ", ".join(f"{k}={v}" for k, v in pane["style"].items()))
         for tc in ws["table_calcs"]:
             lines.append(f"- 表計算 `{tc['pill']}`:")
             for n in tc["nested"]:

@@ -34,12 +34,14 @@ description: 完成したWOWのTableauワークブック1つから、参加者�
 | 中間: HTML ソース | `tmp/walkthrough/walkthrough-{ja,en}.src.html`（画像は `embed:` 参照） |
 | 出力 | `guide/walkthrough-ja.html`・`guide/walkthrough-en.html` |
 
+出題フォルダの中身は gitignore の対象なので、ワークツリーで作業するとそこにはない。その場合は、出題フォルダがあるチェックアウトのパスをスクリプトに渡し、中間物もその出題フォルダに書く。
+
 パイプライン上は、`create-workbook` の refine ループが終わった後に使う。要件の確定（`create-requirements`）の前でも後でもよい。
 
 ## 依存
 
 - Python 3.10+、`Pillow`、`tableauserverclient`・`python-dotenv`（`publish-to-cloud` と同じ。`pip install -r .claude/skills/publish-to-cloud/scripts/requirements.txt`）
-- 照合スクリプトで Excel を読むなら `pandas`・`openpyxl`
+- 照合スクリプトで同梱データを読むために、`.hyper` なら `tableauhyperapi`、Excel なら `pandas`・`openpyxl`
 - Google Chrome（Step 7 の撮影）
 
 ## 手順
@@ -131,10 +133,12 @@ python ${CLAUDE_SKILL_DIR}/scripts/frame_context.py --render outputs/{theme}/tmp
 
 各章の「この値が出れば正解」を、同梱データから再計算するスクリプトを `tmp/walkthrough/check_values.py` に書く。
 
-- データは `.twbx` に同梱されたファイル（`twb-spec.md` の「同梱ファイル」）を zip から直接読む
+- データは `.twbx` に同梱されたファイル（`twb-spec.md` の「同梱ファイル」）を zip から読む。抽出（`.hyper`）なら一時フォルダに取り出して `tableauhyperapi` で読む
+- 補助テーブル（Scaffold など）の中身も出す。章 0 で表にするため
 - 計算は TWB の式をそのまま Python に移す。表計算は、そのシートの方向（順序）で並べてから累積・合計する。各ディメンションの中の順は、そのシートの並べ替え（手動ならその順、計算の並べ替えならその値の順）に従う
 - 章ごとに、その章のビューのディメンションの粒度で出す。検算シート（テキスト表）を使う章は、検算シートのディメンションで出す
 - 出力を描画と突き合わせる: シート単体の描画の軸目盛りと、帯・棒の端の位置、ラベルの金額が合うこと。合わなければ、式の写し間違いか方向の違いかを確かめてから先に進む
+- 積み上げの並び（どの値がどちらの端に来るか）は、並べ替えと方向から算出し、描画で確かめてから書く。描画だけを見て書かない
 - 0〜1 の割合は小数 3 桁、金額は整数ドルに丸める
 - Windows では先頭で `sys.stdout.reconfigure(encoding="utf-8")` を呼ぶ
 
@@ -159,7 +163,7 @@ python ${CLAUDE_SKILL_DIR}/scripts/frame_context.py --render outputs/{theme}/tmp
 1. **ゴールのシート**: `ctx-<シート>.png`、その下にシェルフとマークカードの模式図（`.tbl`）とシート単体の描画。その章で作るピルに `.new` と「← これを作る」
 2. **このシートのディメンション**: 置く場所と役割の表。置かないディメンションも、置かない理由と一緒に書く（表計算の方向に効くため）
 3. **部品の分解図**: `twb-spec.md` の部品の木から、その章に要る範囲を `.tree` で描く。この章で作る計算は `.make` に手順番号、前の章の計算は `.reuse` に章番号を付ける
-4. **手順**: 計算 1〜2 本ごとに「目的 → ヒント → 答え（式と用途）→ 確認の値」。最後の手順で「シートを組み、表計算の方向を決める」: 方向のダイアログ（`.dlg`）、新規シートで忘れやすい設定（並べ替え・軸の固定と反転・不透明度）、手順を終えた画面
+4. **手順**: 計算 1〜2 本ごとに「目的 → ヒント → 答え（式と用途）→ 確認の値」。最後の手順で「シートを組み、表計算の方向を決める」: 方向のダイアログ（`.dlg`）、新規シートで忘れやすい設定（並べ替え・軸の固定と反転・不透明度・マークの色と枠線・数値の書式）、手順を終えた画面、確認の値の順
 
 書き方:
 
@@ -169,7 +173,9 @@ python ${CLAUDE_SKILL_DIR}/scripts/frame_context.py --render outputs/{theme}/tmp
 - 計算の値が画面に出ない章（表計算の部品を作る章）では、検算用のテキスト表シートを作らせ、その表で確認させる。検算シートのディメンションと方向は、その章のシートと同じにする
 - 方向のダイアログは `ordering_type` が `Field` の入れ子計算だけを描き、`order` の順に番号を振る。ビューにあって順序に入らないディメンション（Path など）はチェックなしで描く
 - 並べ替えを設定したピルには並べ替えのアイコン（テンプレートの凡例と同じ SVG）を付ける
-- 新規シートで既定と違う設定（手動の並べ替え、軸の固定・反転）は、`twb-spec.md` のシートの節から漏れなく拾い、手順の中に「忘れると何が変わるか」と一緒に書く
+- 新規シートで既定と違う設定（手動の並べ替え、軸の固定・反転、ペインの書式、計算の既定の数値書式）は、`twb-spec.md` のシートと計算の節から漏れなく拾い、手順の中に「忘れると何が変わるか」と一緒に書く
+- 並べ替えに使う計算（部品の木の `Sort <フィールド>`）も、その章で作る計算に含める
+- 「手順を終えた画面」はゴールのシートと同じ描画を使う。画像が 2 回埋め込まれるので、手順書は 2MB 前後になる
 - 内部の案の名前・作業ファイル名・検証用ワークブックの名前を書かない
 
 ### Step 6: 英語版を書く
@@ -178,7 +184,8 @@ python ${CLAUDE_SKILL_DIR}/scripts/frame_context.py --render outputs/{theme}/tmp
 
 - `<html lang="en">`、Google Fonts に `IBM+Plex+Sans` を足し、`--font-body` の先頭に `"IBM Plex Sans"` を置く
 - UI 語・部品の見出しは [references/ui-terms.md](references/ui-terms.md) の表に従う。表にない UI 語が出たら、英語版 Tableau の表記を確かめて表に足す
-- 書き終えたら、CJK 文字が残っていないことを検索で確かめる（`grep -nP "[\x{3040}-\x{30ff}\x{4e00}-\x{9fff}]"`）
+- テンプレートの CSS コメント・HTML コメントの日本語も訳すか消す
+- 書き終えたら、CJK 文字が残っていないことを確かめる。Git Bash では `LC_ALL=C.UTF-8 grep -nP "[\x{3040}-\x{30ff}\x{4e00}-\x{9fff}\x{ff00}-\x{ffef}]" <src.html>`（`LC_ALL` がないと `-P` が失敗する）
 
 ### Step 7: 組み立てて検査し、撮影する
 

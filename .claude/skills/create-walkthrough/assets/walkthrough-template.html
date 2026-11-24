@@ -243,8 +243,9 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
 <div class="wrap">
 <!--
   手順書のテンプレート（日本語版）。{{...}} を埋め、要らない部品は消す。
-  章の型・部品の使い方は SKILL.md の Step 6 にある。画像は embed:<テーマフォルダからの相対パス> で参照する。
+  章の型・部品の使い方は SKILL.md の Step 5 にある。画像は embed:<テーマフォルダからの相対パス> で参照する。
   英語版は同じ構造のまま訳す（lang="en"、--font-body の先頭に "IBM Plex Sans"、Google Fonts に IBM+Plex+Sans を足す）。
+  英語版では CSS とこのコメントの日本語も訳すか消す（Step 6 の CJK 検査に掛かるため）。
 -->
 
 <header class="top">
@@ -398,6 +399,16 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
           </div>
         </div>
       </div>
+      <!-- 値が画面に出ない計算は、検算シート（テキスト表）を作らせて確かめる。検算シートのディメンションと方向は、その章のシートと同じにする -->
+      <div class="todo">
+        <h3>検算シートを作る</h3>
+        <ol>
+          <li>新しいシートを作り、名前を <code>Check</code> にする（名前は任意）</li>
+          <li><code>{{ディメンション}}</code> を Rows に置き、{{並べ替え}}</li>
+          <li><code>{{計算}}</code> をマークの Text に置き、続けて残りの計算を表の上にドロップする（Measure Names が Columns に、Measure Values が Text に入る）</li>
+          <li>Measure Values カードの △ ピルごとに「表計算の編集...」を開き、{{方向}}にする</li>
+        </ol>
+      </div>
       <div class="expect">
         <h3>確認：この値が出れば正解（フィルターなし）</h3>
         <div class="viz"><table>
@@ -407,6 +418,7 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
         <p>{{値の読み方。合わないときに確かめる設定}}</p>
       </div>
 
+      <!-- 最後の手順。確認の囲みは「手順を終えた画面」の後に置く -->
       <h4>手順 {{n}}：シートを組み、表計算の方向を決める</h4>
       <p class="note"><b>新規シートなので、書式は自分で付けます。</b>次の {{n}} つを忘れると、{{何が}}完成図と変わります。</p>
       <ul class="settings" style="border-top:0;padding-top:0"><li>{{並べ替え・軸の固定と反転など}}</li></ul>
@@ -425,6 +437,28 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
   <p>{{第 1 部の形から何を変えるか 1〜2 文}}</p>
 </div>
 <!-- 核の計算の章では、ヒントの前に <div class="core"> で「新しく考えるのはここだけ」を 1〜2 文で置く -->
+
+<!-- ============ 終章: ダッシュボードに並べる ============ -->
+<section class="step" aria-labelledby="cz">
+  <div class="step-no">終章</div>
+  <div class="step-body">
+    <div class="lead">
+      <h2 id="cz">ダッシュボードに並べる</h2>
+      <p>{{サイズと並べ方を 1〜2 文}}</p>
+    </div>
+    <div class="todo">
+      <h3>やること</h3>
+      <ol>
+        <li>ダッシュボードのサイズを {{幅 × 高さ}} の固定にする</li>
+        <li>{{コンテナー}}にシートを上から {{並び}} の順に置き、各シートのタイトルを隠す</li>
+        <li>{{固定の高さ・余白}}</li>
+        <li>{{フィルターの表示（データソース全体のフィルターなので、どのシートから表示してもよい）}}</li>
+      </ol>
+    </div>
+    <ul class="settings" style="border-top:0;padding-top:0"><li>{{章で触れなかった書式（色・枠線・ラベルの書式など）}}</li></ul>
+    <figure class="shot ctx"><img src="embed:{{完成版ダッシュボードの描画}}" alt="完成版のダッシュボード"><figcaption class="caption">完成版のダッシュボード（フィルターなし）</figcaption></figure>
+  </div>
+</section>
 
 <footer>
   <div>データ：{{データの名前と版}}。</div>

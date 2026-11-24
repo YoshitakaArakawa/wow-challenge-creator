@@ -35,6 +35,9 @@ note: 日本語版で書いた語を英語版でどう書くかの表。UI 語�
 | メジャーネーム / メジャーバリュー | Measure Names / Measure Values |
 | リレーションシップ | Relationship |
 | リレーションシップの計算 | Relationship calculation |
+| ラベルの編集... | Edit Label... |
+| 垂直方向のコンテナー / 水平方向のコンテナー | Vertical container / Horizontal container |
+| 固定（ダッシュボードのサイズ） | Fixed size |
 
 ## マークと軸
 
@@ -74,6 +77,7 @@ note: 日本語版で書いた語を英語版でどう書くかの表。UI 語�
 |---|---|
 | 全体 | OVERVIEW |
 | 章 N | PART N |
+| 終章 | FINAL |
 | 第 1 部 / 第 2 部 | Section 1 / Section 2 |
 | ゴールのシート | Target sheet |
 | このシートのディメンション | Dimensions on this sheet |
@@ -88,6 +92,8 @@ note: 日本語版で書いた語を英語版でどう書くかの表。UI 語�
 | フィルターなしで描画したもの | Rendered with no filter |
 | このシートが描く部分（オレンジの枠）。完成版のダッシュボードをフィルターなしで描画したもの | The part this sheet draws (orange frame), from the finished dashboard rendered with no filter |
 | 作る / 前の章 / データ（分解図の凡例） | Build / Earlier part / Data |
+| 行レベル / 集計 / 表計算 / 表計算を参照（計算のタグ） | Row level / Aggregate / Table calc / Uses a table calc |
+| 置かない（ディメンションの表） | Not placed |
 | 〜の中（計算の使われる場所） | Inside ... |
 | ← これを作る | ← build this |
 | 検算シート | check sheet |
