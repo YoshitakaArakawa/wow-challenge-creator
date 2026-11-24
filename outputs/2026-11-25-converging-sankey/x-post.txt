@@ -1,0 +1,7 @@
+#WOW2026 #Tableau Week 47 is live!
+
+Can a Sankey show losses? Let's build one where the Gains and Loss bands cancel each other out and converge into the net profit.
+
+A starter workbook is there if you want a head start. Have fun!
+
+https://www.workout-wednesday.com/2026w47tab/
