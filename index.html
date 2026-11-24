@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WOW Tableau Guides</title>
+<meta name="description" content="Walkthroughs for Workout Wednesday Tableau challenges.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* Layout: one card per challenge (newest first); inside each card, a JA and an EN sub-block side by side (stacked on phones) */
+:root {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --sub: #f3f6f9;
+  --fg: #1d2733;
+  --muted: #5d6b7a;
+  --line: #dde3ea;
+  --gains: #2d9ced;
+  --loss: #f59623;
+  --font-display: "Space Grotesk", "Noto Sans JP", system-ui, sans-serif;
+  --font-body: "Inter", "Noto Sans JP", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #12171d; --surface: #1a2129; --sub: #212a34; --fg: #e4eaf0; --muted: #98a6b5; --line: #2c3743;
+  --gains: #5ab4f2; --loss: #f7a94a; color-scheme: dark } }
+
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.7; }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 28px; }
+
+header h1 { font-family: var(--font-display); font-size: 32px; line-height: 1.2; margin: 0 0 8px; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 60ch; }
+.flow { display: inline-flex; gap: 4px; margin-bottom: 12px; }
+.flow span { height: 6px; border-radius: 3px; }
+
+.challenges { display: flex; flex-direction: column; gap: 20px; }
+.challenge { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.challenge-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.week { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--gains); font-variant-numeric: tabular-nums; }
+.challenge-head h2 { font-family: var(--font-display); font-size: 21px; line-height: 1.3; margin: 0; text-wrap: balance; }
+
+.subs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sub { min-width: 0; background: var(--sub); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.sub-label { font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; }
+.sub p { margin: 0; font-size: 13px; color: var(--muted); }
+.sub ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.sub a { color: var(--fg); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--line); }
+.sub a:hover { border-color: var(--gains); }
+.sub a:focus-visible { outline: 2px solid var(--gains); outline-offset: 2px; }
+
+@media (max-width: 600px) {
+  .subs { grid-template-columns: 1fr; }
+  header h1 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="flow" aria-hidden="true"><span style="width:56px;background:var(--gains)"></span><span style="width:24px;background:var(--loss)"></span></div>
+    <h1>WOW Tableau Guides</h1>
+    <p>Workout Wednesday の Tableau 出題の手順書です。<br>Walkthroughs for Workout Wednesday Tableau challenges.</p>
+  </header>
+
+  <!-- Add each new challenge as a <section class="challenge"> at the top of this list -->
+  <div class="challenges">
+    <section class="challenge" aria-labelledby="w2026-47">
+      <div class="challenge-head"><span class="week">2026 W47</span><h2 id="w2026-47">Let’s Build a Converging Sankey!</h2></div>
+      <div class="subs">
+        <div class="sub" lang="ja">
+          <span class="sub-label">日本語</span>
+          <p>Gains と Loss を打ち消し合わせ、Net に収束させる Sankey</p>
+          <ul><li><a href="outputs/2026-11-25-converging-sankey/guide/starter-walkthrough-ja.html">スターター手順書</a></li></ul>
+        </div>
+        <div class="sub" lang="en">
+          <span class="sub-label">English</span>
+          <p>Gains and losses offset each other and converge into the net</p>
+          <ul><li><a href="outputs/2026-11-25-converging-sankey/guide/starter-walkthrough-en.html">Starter walkthrough</a></li></ul>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+</body>
+</html>
